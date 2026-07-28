@@ -1,0 +1,17 @@
+# 依賴
+node_modules/
+
+# 系統檔
+.DS_Store
+Thumbs.db
+
+# 編輯器 / 工具
+.vscode/
+.claude/
+
+# 日誌
+*.log
+
+# 匯出的 JSON（保留資料夾結構，不追蹤內容）
+/public/download/tibetan-siddham/*
+!/public/download/tibetan-siddham/.gitkeep

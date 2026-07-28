@@ -1,0 +1,425 @@
+/* tibetan-siddham — 頁面樣式：主題 token（light/dark）+ 本頁專屬樣式。
+ * Materialize 元件的深色由共用 materialize-dark.css 處理；
+ * 共用工具列樣式見 side-tool.css。
+ */
+
+/* ===== 內嵌字型（隨 app；CDN 無可靠來源，否則輸出會是缺字方塊） ===== */
+@font-face {
+  /* 藏文：Noto Serif Tibetan（暫用 TTF；本機無 woff2 轉檔工具，日後可轉 woff2） */
+  font-family: 'Noto Serif Tibetan';
+  src: url('./fonts/NotoSerifTibetan-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Noto Sans Siddham';
+  src: url('./fonts/NotoSansSiddham-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ===== 主題變數（light / dark 由 <html data-theme> 切換） ===== */
+:root,
+[data-theme="dark"] {
+  --bg: #0f1115;
+  --surface: #161a22;
+  --surface-2: #1b2030;
+  --text: #e8eaf0;
+  --muted: #a8b0c0;
+  --border: rgba(255, 255, 255, 0.12);
+  --accent: #90caf9;
+  --card-bg: #0f1115;
+  --tool-bg: #1b2030;
+  --tool-fg: #e8eaf0;
+  --overlay: rgba(10, 14, 22, 0.84);
+  --drop-border: #3a4252;
+}
+
+[data-theme="light"] {
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  --text: #1f2328;
+  --muted: #57606a;
+  --border: rgba(0, 0, 0, 0.12);
+  --accent: #0969da;
+  --card-bg: #ffffff;
+  --tool-bg: #ffffff;
+  --tool-fg: #1f2328;
+  --overlay: rgba(240, 243, 247, 0.86);
+  --drop-border: #c4ccd6;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+body {
+  transition: background .2s ease, color .2s ease;
+}
+
+main {
+  padding: 24px 0 64px;
+}
+
+.app-container {
+  width: 92%;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+/* 兩欄：左輸入 / 右輸出。窄螢幕（< l）自動疊起 */
+.two-col {
+  margin-bottom: 0;
+}
+
+.two-col > [class*="col"] {
+  display: flex;
+}
+
+.two-col .card {
+  flex: 1 1 auto;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+/* ===== 標題 ===== */
+.app-header {
+  text-align: center;
+  margin: 8px 0 22px;
+}
+
+.app-header h1 {
+  font-size: 1.7rem;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+
+.app-header .subtitle {
+  color: var(--muted);
+  font-size: .95rem;
+  margin: 0;
+}
+
+/* ===== 卡片 ===== */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: none;
+  padding: 18px 22px;
+  margin: 0 0 20px;
+}
+
+.input-card .input-field {
+  margin-top: 6px;
+}
+
+/* 輸入文字欄位：相對定位，供內嵌複製鈕停靠 */
+.input-field-main {
+  position: relative;
+}
+
+/* 輸入區的內嵌複製鈕（輸入欄位右上角，沿用 .out-copy 樣式） */
+.in-copy {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+}
+
+#ts-input {
+  line-height: 1.6;
+}
+
+.hint {
+  font-size: .85rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 2px 0 14px;
+}
+
+.hint code,
+code {
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: .85em;
+}
+
+/* ===== 範例 chips ===== */
+.examples {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.examples-label {
+  color: var(--muted);
+  font-size: .85rem;
+}
+
+.chip.ex {
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  transition: background .15s, color .15s;
+}
+
+.chip.ex:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ===== 選項列 ===== */
+.options-row {
+  margin: 6px 0 0;
+}
+
+.switch-col {
+  display: flex;
+  align-items: center;
+  min-height: 64px;
+}
+
+.switch span,
+.switch label {
+  color: var(--text) !important;
+}
+
+/* ===== 輸出 ===== */
+.out-block {
+  margin-bottom: 18px;
+}
+
+.out-block:last-child {
+  margin-bottom: 0;
+}
+
+.out-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.out-label {
+  font-size: .8rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.out-copy {
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 2px;
+  transition: color .15s, background .15s;
+}
+
+.out-copy:hover {
+  color: var(--accent);
+  background: var(--surface-2);
+}
+
+.out-copy i {
+  font-size: 18px;
+}
+
+.out-value {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  min-height: 1.6em;
+  word-break: break-word;
+  white-space: pre-wrap;
+  user-select: text;
+  color: var(--text);
+}
+
+/* 空輸出時的占位（語言中性） */
+.out-value:empty::before {
+  content: '—';
+  color: var(--muted);
+  opacity: .7;
+}
+
+.tibetan-text {
+  /* 藏文字型優先；少數借用的悉曇標點(如 ~ → 𑗁)落到內嵌的 Noto Sans Siddham，避免缺字方塊 */
+  font-family: 'Noto Serif Tibetan', "Jomolhari", 'Noto Sans Siddham', serif;
+  font-size: 2.4rem;
+  line-height: 1.6;
+}
+
+.siddham-text {
+  font-family: 'Noto Sans Siddham', serif;
+  font-size: 2.6rem;
+  line-height: 1.5;
+}
+
+.latin-text {
+  font-size: 1.25rem;
+}
+
+.codepoints-text {
+  font-size: .9rem;
+  color: var(--muted);
+}
+
+/* ===== 頁尾 ===== */
+.app-footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: .8rem;
+  margin-top: 8px;
+}
+
+.app-footer a {
+  color: var(--accent);
+}
+
+/* ===== 來源檔列（載入匯出檔時顯示其 sourceFile） ===== */
+.source-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 13px;
+  font-size: .8rem;
+  color: var(--muted);
+}
+
+.source-row .source-label {
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  flex: 0 0 auto;
+}
+
+.source-row .source-file {
+  word-break: break-all;
+  color: var(--text);
+}
+
+/* ===== 匯出檔清單側欄（右側 sidenav） ===== */
+.sidenav {
+  background: var(--surface) !important;
+  left: auto !important;
+  right: 0 !important;
+}
+
+.sidenav .subheader {
+  height: auto !important;
+  min-height: 0 !important;
+  line-height: 1.4 !important;
+  padding: 12px 20px !important;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--muted) !important;
+}
+
+.sidenav .subheader .material-icons {
+  margin-top: 1px;
+}
+
+.sidenav .subheader .path {
+  display: block;
+  font-size: .76rem;
+  opacity: .8;
+  word-break: break-all;
+}
+
+.sidenav li > a {
+  height: auto !important;
+  line-height: 1.4 !important;
+  padding: 11px 20px !important;
+  color: var(--text) !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidenav li > a .material-icons {
+  color: var(--muted) !important;
+  margin: 0;
+}
+
+.sidenav li > a:hover {
+  background: rgba(127, 127, 127, 0.14) !important;
+}
+
+.sidenav .divider {
+  background-color: var(--border) !important;
+}
+
+.dl-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: .82rem;
+}
+
+.dl-meta {
+  font-size: .72rem;
+  color: var(--muted) !important;
+  margin-left: auto;
+  padding-left: 8px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  opacity: .8;
+}
+
+.dl-empty {
+  color: var(--muted) !important;
+  padding: 11px 20px;
+  font-size: .9rem;
+}
+
+/* 淺色模式：只調整 toast 文字顏色（底色不動）。
+   只有「無色彩 class」的預設淺灰底（#eee，如語言切換）→ 深色字較清楚；
+   有色彩 class 的（green/teal/orange/red 以及中灰 grey #9e9e9e）→ 白字較清楚。
+   深色模式整體維持 materialize-dark 現況不變。用 #toast-container 提高優先級確保生效。 */
+html.light-mode #toast-container .toast,
+[data-theme="light"] #toast-container .toast {
+  color: #212121;
+}
+html.light-mode #toast-container .toast.green,
+html.light-mode #toast-container .toast.teal,
+html.light-mode #toast-container .toast.orange,
+html.light-mode #toast-container .toast.red,
+html.light-mode #toast-container .toast.grey,
+[data-theme="light"] #toast-container .toast.green,
+[data-theme="light"] #toast-container .toast.teal,
+[data-theme="light"] #toast-container .toast.orange,
+[data-theme="light"] #toast-container .toast.red,
+[data-theme="light"] #toast-container .toast.grey {
+  color: #fff;
+}
+
+/* toast 列印時不出現（雖無列印需求，保持家族一致） */
+@media print {
+  #toast-container { display: none !important; }
+}

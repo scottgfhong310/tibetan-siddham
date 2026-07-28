@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="dark">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <title data-i18n-doctitle="title.page">藏文梵字轉換器</title>
+
+  <!-- 防主題閃爍：render 前先讀 localStorage 設好 data-theme + light/dark-mode class
+       （class 是給共用 materialize-dark.css 用的；無 light-mode 時它會跟隨系統深色偏好） -->
+  <script>try { var t = localStorage.getItem('tibetan-siddham-theme') || 'dark'; var r = document.documentElement; r.dataset.theme = t; r.classList.add(t === 'light' ? 'light-mode' : 'dark-mode'); } catch (e) {}</script>
+
+  <!-- Materialize 1.0.0 + Material Icons（CDN） -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" />
+  <!-- Materialize 元件深色（家族共用，於 materialize.css 之後、本頁樣式之前） -->
+  <link rel="stylesheet" href="./materialize-dark.css" />
+
+  <link rel="stylesheet" href="./tibetan-siddham.css" />
+  <link rel="stylesheet" href="./side-tool.css" />
+</head>
+
+<body>
+  <!-- 匯出檔清單側欄（右側；列出 /download/tibetan-siddham/ 內容，降冪） -->
+  <ul id="downloads-panel" class="sidenav" style="width: 360px;">
+    <li>
+      <a class="subheader">
+        <i class="material-icons">dehaze</i>
+        <span><span data-i18n="downloads.header">匯出檔</span><span class="path">/download/tibetan-siddham</span></span>
+      </a>
+    </li>
+    <li>
+      <div class="divider"></div>
+    </li>
+    <div id="downloads-list"></div>
+  </ul>
+
+  <main>
+    <div class="app-container">
+      <header class="app-header">
+        <h1 data-i18n="app.title">藏文梵字轉換器</h1>
+        <p class="subtitle" data-i18n="app.subtitle">把 ASCII / IAST 羅馬轉寫轉成藏文梵字、悉曇文字、拉丁轉寫與 Unicode 碼位。</p>
+      </header>
+
+      <!-- ===== 兩欄：左輸入 / 右輸出 ===== -->
+      <div class="row two-col">
+        <!-- 左欄：輸入 -->
+        <div class="col s12 l6">
+          <section class="card input-card">
+            <div class="input-field">
+              <textarea id="ts-title" class="materialize-textarea"
+                data-i18n-placeholder="input.titlePlaceholder"></textarea>
+              <label for="ts-title" data-i18n="input.titleLabel">標題</label>
+            </div>
+            <div class="input-field input-field-main">
+              <a href="#!" class="out-copy in-copy" id="copy-input" data-i18n-title="tool.copyInput" title="複製輸入">
+                <i class="material-icons">content_copy</i>
+              </a>
+              <textarea id="ts-input" class="materialize-textarea mono"
+                data-i18n-placeholder="input.placeholder" placeholder="o;m"></textarea>
+              <label for="ts-input" data-i18n="input.label">輸入（ASCII / IAST 羅馬轉寫）</label>
+            </div>
+
+            <div class="hint" data-i18n-html="input.hint">
+              以 <code>;m</code>=ṁ、<code>.h</code>=ḥ、<code>~m</code>=m̐、長母音 <code>aa</code>=ā 等記法輸入。
+            </div>
+
+            <div class="examples">
+              <span class="examples-label" data-i18n="examples.label">範例：</span>
+              <span class="ex-chips">
+                <a href="#!" class="chip ex" data-ex="o;m">o;m</a>
+                <a href="#!" class="chip ex" data-ex="siddha;m">siddha;m</a>
+                <a href="#!" class="chip ex" data-ex="na ma.h">na ma.h</a>
+                <a href="#!" class="chip ex" data-ex="hrii.h">hrii.h</a>
+                <a href="#!" class="chip ex" data-ex="huu~m">huu~m</a>
+              </span>
+            </div>
+
+            <div class="row options-row">
+              <div class="input-field col s12 m6">
+                <select id="opt-input-method">
+                  <option value="ISO15919" selected>ISO 15919</option>
+                  <option value="KH">Kyoto-Harvard</option>
+                </select>
+                <label data-i18n="opt.inputMethod">輸入法</label>
+              </div>
+              <div class="input-field col s12 m6">
+                <select id="opt-translit">
+                  <option value="ISO15919">ISO 15919</option>
+                  <option value="IAST" selected>IAST</option>
+                </select>
+                <label data-i18n="opt.translit">拉丁轉寫</label>
+              </div>
+              <div class="col s12 switch-col">
+                <div class="switch">
+                  <label>
+                    <input type="checkbox" id="opt-ignore-spaces" checked />
+                    <span class="lever"></span>
+                    <span data-i18n="opt.ignoreSpaces">忽略空格與連字號</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- 載入的匯出檔其 sourceFile（來源檔名）；無來源時隱藏 -->
+            <div id="source-row" class="source-row" style="display:none;">
+              <span class="source-label" data-i18n="source.label">來源檔</span>
+              <span id="source-file" class="source-file mono"></span>
+            </div>
+          </section>
+        </div>
+
+        <!-- 右欄：輸出 -->
+        <div class="col s12 l6">
+          <section class="card output-card">
+            <div class="out-block">
+              <div class="out-head">
+                <span class="out-label" data-i18n="out.tibetan">藏文梵字 Tibetan</span>
+                <a href="#!" class="out-copy" data-copy="out-tibetan" data-i18n-title="tool.copy" title="複製">
+                  <i class="material-icons">content_copy</i>
+                </a>
+              </div>
+              <div id="out-tibetan" class="out-value tibetan-text"></div>
+            </div>
+
+            <div class="out-block">
+              <div class="out-head">
+                <span class="out-label" data-i18n="out.siddham">悉曇 Siddhaṁ</span>
+                <a href="#!" class="out-copy" data-copy="out-siddham" data-i18n-title="tool.copy" title="複製">
+                  <i class="material-icons">content_copy</i>
+                </a>
+              </div>
+              <div id="out-siddham" class="out-value siddham-text"></div>
+            </div>
+
+            <div class="out-block">
+              <div class="out-head">
+                <span class="out-label" data-i18n="out.latin">拉丁轉寫</span>
+                <a href="#!" class="out-copy" data-copy="out-latin" data-i18n-title="tool.copy" title="複製">
+                  <i class="material-icons">content_copy</i>
+                </a>
+              </div>
+              <div id="out-latin" class="out-value latin-text"></div>
+            </div>
+
+            <div class="out-block">
+              <div class="out-head">
+                <span class="out-label" data-i18n="out.codepoints">Unicode 碼位（藏文）</span>
+                <a href="#!" class="out-copy" data-copy="out-codepoints" data-i18n-title="tool.copy" title="複製">
+                  <i class="material-icons">content_copy</i>
+                </a>
+              </div>
+              <div id="out-codepoints" class="out-value mono codepoints-text"></div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <footer class="app-footer">
+        <span data-i18n-html="footer.credit">
+          藏文核心為本專案規則表；悉曇引擎：<a href="https://github.com/mandel59/bonji-input" target="_blank" rel="noopener">bonji-input</a>（MIT）。
+        </span>
+      </footer>
+    </div>
+  </main>
+
+  <!-- ===== 右側工具列（flex 自動堆疊） ===== -->
+  <div class="side-tools">
+    <div id="setting-downloads" class="side-tool" data-i18n-title="tool.downloads" title="匯出檔清單">
+      <i class="material-icons">dehaze</i>
+    </div>
+    <div id="setting-chart" class="side-tool" data-i18n-title="tool.chart" title="字元對照表">
+      <i class="material-icons">table_chart</i>
+    </div>
+    <div id="setting-export" class="side-tool" data-i18n-title="tool.export" title="匯出 JSON 到伺服器">
+      <i class="material-icons">data_object</i>
+    </div>
+    <div id="setting-download" class="side-tool" data-i18n-title="tool.download" title="下載 JSON（會先匯出）">
+      <i class="material-icons">file_download</i>
+    </div>
+    <div id="setting-clear" class="side-tool" data-i18n-title="tool.clear" title="清除輸入">
+      <i class="material-icons">delete_sweep</i>
+    </div>
+    <div id="setting-clear-downloads" class="side-tool" data-i18n-title="tool.clearDownloads" title="清空匯出夾">
+      <i class="material-icons">delete_sweep</i>
+    </div>
+    <div id="setting-mode" class="side-tool" data-i18n-title="tool.mode" title="切換 light / dark">
+      <i class="material-icons">dark_mode</i>
+    </div>
+    <div id="setting-lang" class="side-tool" data-i18n-title="tool.lang" title="Language">
+      <i class="material-icons">translate</i>
+    </div>
+  </div>
+
+  <!-- 依賴（CDN，classic globals）：jQuery / Materialize / Lodash -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+
+  <!-- i18n 引擎 + 語言字典（先引擎再各語系；新增語言＝多一個 locale 檔） -->
+  <script src="./i18n.js"></script>
+  <script src="./locales/zh-Hant.js"></script>
+  <script src="./locales/en.js"></script>
+  <script src="./locales/ja.js"></script>
+
+  <!-- 頁面控制器（ESM module：import TibetanSiddhamConverter 防腐層；module 天然 defer） -->
+  <script src="./side-tool.js"></script>   <!-- 共用 utility：側鍵「已執行」微回饋 -->
+  <script type="module" src="./tibetan-siddham.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="dark">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <title data-i18n-doctitle="chart.title">藏文字元對照表</title>
+
+  <!-- 防主題閃爍：與轉換器頁共用同一個 localStorage key -->
+  <script>try { var t = localStorage.getItem('tibetan-siddham-theme') || 'dark'; var r = document.documentElement; r.dataset.theme = t; r.classList.add(t === 'light' ? 'light-mode' : 'dark-mode'); } catch (e) {}</script>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" />
+  <link rel="stylesheet" href="./materialize-dark.css" />
+
+  <!-- 主題 token + 內嵌字型 + 基礎樣式（與轉換器頁共用）；對照表專屬版面在 chart.css -->
+  <link rel="stylesheet" href="./tibetan-siddham.css" />
+  <link rel="stylesheet" href="./chart.css" />
+  <link rel="stylesheet" href="./side-tool.css" />
+</head>
+
+<body>
+  <main>
+    <div class="app-container chart-container">
+      <a href="index.html" class="back-link" data-i18n-title="tool.back" title="返回轉換器">
+        <i class="material-icons">arrow_back</i><span data-i18n="tool.back">返回轉換器</span>
+      </a>
+      <header class="app-header">
+        <h1 data-i18n="chart.title">藏文字元對照表</h1>
+        <p class="subtitle" data-i18n="chart.subtitle">依 tibetan.tsv 的字元對照（羅馬轉寫 → 藏文）。組合字元以 ◌ 標示。</p>
+      </header>
+
+      <!-- 每個 kind 一個 column，由 chart.js 依 tibetan.tsv 填入 -->
+      <div id="chart-grid" class="chart-grid"></div>
+
+      <footer class="app-footer">
+        <span data-i18n-html="footer.credit">
+          藏文核心為本專案規則表；悉曇引擎：<a href="https://github.com/mandel59/bonji-input" target="_blank" rel="noopener">bonji-input</a>（MIT）。
+        </span>
+      </footer>
+    </div>
+  </main>
+
+  <!-- ===== 右側工具列（flex 自動堆疊） ===== -->
+  <div class="side-tools">
+    <div id="setting-back" class="side-tool" data-i18n-title="tool.back" title="返回轉換器">
+      <i class="material-icons">arrow_back</i>
+    </div>
+    <div id="setting-mode" class="side-tool" data-i18n-title="tool.mode" title="切換 light / dark">
+      <i class="material-icons">dark_mode</i>
+    </div>
+    <div id="setting-lang" class="side-tool" data-i18n-title="tool.lang" title="Language">
+      <i class="material-icons">translate</i>
+    </div>
+  </div>
+
+  <!-- 依賴（CDN，classic globals） -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+
+  <script src="./i18n.js"></script>
+  <script src="./locales/zh-Hant.js"></script>
+  <script src="./locales/en.js"></script>
+  <script src="./locales/ja.js"></script>
+
+  <!-- 對照表頁控制器（ESM module） -->
+  <script src="./side-tool.js"></script>   <!-- 共用 utility：側鍵行為（check 微回饋＋溢出收納） -->
+  <script type="module" src="./chart.js"></script>
+</body>
+
+</html>
