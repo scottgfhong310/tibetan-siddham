@@ -20,6 +20,7 @@ I18n.register('ja', {
   'tool.copyInput': '入力をコピー',
   'tool.mode': 'ライト / ダーク切替',
   'tool.lang': '言語',
+  'tool.more': 'その他のツール',
   'toast.lang': '{name} に切り替えました',
   'tool.chart': '文字対照表（新規タブ）',
   'tool.back': 'コンバーターに戻る',

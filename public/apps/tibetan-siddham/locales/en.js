@@ -20,6 +20,7 @@ I18n.register('en', {
   'tool.copyInput': 'Copy input',
   'tool.mode': 'Toggle light / dark',
   'tool.lang': 'Language',
+  'tool.more': 'More tools',
   'toast.lang': 'Switched to {name}',
   'tool.chart': 'Character chart (new tab)',
   'tool.back': 'Back to converter',

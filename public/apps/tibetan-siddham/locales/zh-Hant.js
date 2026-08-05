@@ -20,6 +20,7 @@ I18n.register('zh-Hant', {
   'tool.copyInput': '複製輸入',
   'tool.mode': '切換 light / dark',
   'tool.lang': '語言',
+  'tool.more': '更多工具',
   'toast.lang': '已切換為 {name}',
   'tool.chart': '字元對照表（開新分頁）',
   'tool.back': '返回轉換器',
