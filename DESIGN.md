@@ -24,13 +24,14 @@ tibetan-siddham.js / chart.js        ← 控制器（glue）：碰 DOM、事件�
 tibetan-siddham-converter.js         ← 防腐層 ACL：唯一對外轉換介面（純邏輯、不碰 DOM）
   │            ├── tibetan-core.js                  ← 本專案藏文核心（規則表驅動）
   │            │       └── data/tibetan.tsv         ← source of truth
-  │            └── vendor/bonji-input/siddham.js    ← vendored 悉曇引擎（MIT、原樣不改）
+  │            └── vendor/bonji-input/siddham.js    ← vendored 悉曇引擎（MIT；上游 ＋ 14 個符號記法，見其 SOURCE.md）
 ```
 
 **邊界紀律（硬約束）**：
 
 - App 其餘程式（控制器、對照表）**只** import `tibetan-siddham-converter.js`，**絕不**直接 import `vendor/bonji-input/siddham.js` 或 `tibetan-core.js`。
 - 升級 vendored 悉曇引擎 → 只動 wrapper（ACL）；換藏文規則 → 只改 `tibetan.tsv`（必要時 `tibetan-core.js` 的解析）。
+  ⚠️ **這一份引擎不是原樣的上游**：它自孵化器原型帶來 14 個符號記法（`*0`–`*7`、`o2`／`o2x`／`ox2`／`ox3`／`ox4`／`oxx`），與 `bonji` 所 vendored 的那一份不同（2026-10-11 實查）。**升級時不可整檔換成上游**，要把那 14 項重新併入——清單與碼位見 `vendor/bonji-input/SOURCE.md`。
 - 之所以這樣分：`siddham.js` 是外來的、會被整支替換；`tibetan-core.js` 是自有規則核心；兩者語意不同，但對 UI 應呈現**單一介面**——這就是 ACL 的職責。
 
 **偏離家族 §4.2 字面之處**：核心不是 IIFE→`window.XxxLib`，而是**原生 ESM**（`tibetan-core.js` / `siddham.js` / converter / 控制器都 `export`，以 `<script type="module">` 載入）。理由：vendored 引擎本身是 ESM 且 canon 禁止改它，故全鏈走 ESM。守其**精神**（純核心、零依賴、不碰 DOM），與 `bonji` 一致。jQuery / Materialize / Lodash / I18n 仍是 classic CDN globals。

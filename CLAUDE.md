@@ -1,6 +1,6 @@
 # tibetan-siddham — Session context
 
-把 ASCII / IAST 羅馬轉寫轉成**藏文梵字（Tibetan-script Sanskrit）＋ 悉曇（Siddhaṁ）＋ 拉丁轉寫 ＋ Unicode 碼位**的單頁 WebApp。**轉換全在瀏覽器**:藏文用本專案規則表(`tibetan-core.js` + `data/tibetan.tsv`)、悉曇用 vendored 的 [mandel59/bonji-input](https://github.com/mandel59/bonji-input)(MIT,原樣不改),兩者都只透過防腐層 `TibetanSiddhamConverter` 使用。版面為左輸入 / 右輸出兩欄。
+把 ASCII / IAST 羅馬轉寫轉成**藏文梵字（Tibetan-script Sanskrit）＋ 悉曇（Siddhaṁ）＋ 拉丁轉寫 ＋ Unicode 碼位**的單頁 WebApp。**轉換全在瀏覽器**:藏文用本專案規則表(`tibetan-core.js` + `data/tibetan.tsv`)、悉曇用 vendored 的 [mandel59/bonji-input](https://github.com/mandel59/bonji-input)(MIT;**不是原樣的上游**——多 14 個符號記法,與 `bonji` 那一份不同,見 `vendor/bonji-input/SOURCE.md`),兩者都只透過防腐層 `TibetanSiddhamConverter` 使用。版面為左輸入 / 右輸出兩欄。
 
 本 app 屬於 **nodeapp WebApp 家族**;共同規範與流程在
 <https://github.com/scottgfhong310/nodeapp-webapp-family>(`DESIGN_GUIDELINES.md` 規範、`WORKFLOW.md` 流程)。**改動前請先讀那兩份,照其中 canon 做。**
@@ -19,7 +19,7 @@ public/apps/tibetan-siddham/        # 前端(服務於 /apps/tibetan-siddham/)
 ├─ tibetan-siddham-converter.js     # 防腐層:唯一對外轉換介面(ESM、不碰 DOM)
 ├─ tibetan-core.js                  # 本專案藏文規則核心(initTibetan + ascii2tibetan;會 fetch ./data/tibetan.tsv)
 ├─ data/tibetan.tsv                 # 藏文對照表(source of truth;kind/token/out/comment)
-├─ vendor/bonji-input/{siddham.js, LICENSE, SOURCE.md}     # vendored 悉曇引擎(MIT、勿改邏輯)
+├─ vendor/bonji-input/{siddham.js, LICENSE, SOURCE.md}     # vendored 悉曇引擎(MIT;上游＋14 個符號記法、勿再改邏輯)
 ├─ fonts/{NotoSerifTibetan-Regular.ttf, NotoSansSiddham-Regular.woff2, *-OFL.txt}
 ├─ side-tool.css · side-tool.js · materialize-dark.css   # 家族共用側鍵（樣式＋setIconDone 行為；權威版＝家族 repo，§5.5）
 └─ i18n.js · locales/{zh-Hant,en,ja}.js

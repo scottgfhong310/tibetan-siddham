@@ -39,7 +39,7 @@ public/apps/tibetan-siddham/        # フロントエンド（/apps/tibetan-sidd
 ├─ tibetan-siddham-converter.js     # 防腐層：唯一の変換インターフェース（ESM、DOM 非依存）
 ├─ tibetan-core.js                  # 本プロジェクトのチベット文字規則コア（initTibetan + ascii2tibetan）
 ├─ data/tibetan.tsv                 # チベット文字対照表（source of truth）
-├─ vendor/bonji-input/{siddham.js, LICENSE, SOURCE.md}     # vendored 悉曇エンジン（MIT、無改変）
+├─ vendor/bonji-input/{siddham.js, LICENSE, SOURCE.md}     # vendored 悉曇エンジン（MIT；上流＋記号記法 14 項目）
 ├─ fonts/{NotoSerifTibetan-Regular.ttf, NotoSansSiddham-Regular.woff2, *-OFL.txt}
 ├─ i18n.js · locales/{zh-Hant,en,ja}.js
 └─ side-tool.css · materialize-dark.css
@@ -123,7 +123,7 @@ const r = c.convert("siddha;m");
 
 ## クレジット
 
-- 悉曇エンジン：[mandel59/bonji-input](https://github.com/mandel59/bonji-input)（MIT）、無改変で vendored。
+- 悉曇エンジン：[mandel59/bonji-input](https://github.com/mandel59/bonji-input)（MIT）。vendored したものは上流に記号記法を 14 項目追加しており、それ以外は同一（`vendor/bonji-input/SOURCE.md` を参照）。
 - フォント：Noto Serif Tibetan、Noto Sans Siddham（SIL Open Font License）。
 
 [MIT](LICENSE) © 2026 [Scott G.F. Hong](https://github.com/scottgfhong310)

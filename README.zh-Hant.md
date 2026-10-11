@@ -39,7 +39,7 @@ public/apps/tibetan-siddham/        # 前端（服務於 /apps/tibetan-siddham/�
 ├─ tibetan-siddham-converter.js     # 防腐層：唯一對外轉換介面（ESM、不碰 DOM）
 ├─ tibetan-core.js                  # 本專案藏文規則核心（initTibetan + ascii2tibetan）
 ├─ data/tibetan.tsv                 # 藏文對照表（source of truth）
-├─ vendor/bonji-input/{siddham.js, LICENSE, SOURCE.md}     # vendored 悉曇引擎（MIT、原樣不改）
+├─ vendor/bonji-input/{siddham.js, LICENSE, SOURCE.md}     # vendored 悉曇引擎（MIT；上游＋14 個符號記法）
 ├─ fonts/{NotoSerifTibetan-Regular.ttf, NotoSansSiddham-Regular.woff2, *-OFL.txt}
 ├─ i18n.js · locales/{zh-Hant,en,ja}.js
 └─ side-tool.css · materialize-dark.css
@@ -123,7 +123,7 @@ const r = c.convert("siddha;m");
 
 ## 致謝
 
-- 悉曇引擎：[mandel59/bonji-input](https://github.com/mandel59/bonji-input)（MIT），原樣 vendored。
+- 悉曇引擎：[mandel59/bonji-input](https://github.com/mandel59/bonji-input)（MIT）；vendored 的這一份在上游之外多了 14 個符號記法，其餘相同（見 `vendor/bonji-input/SOURCE.md`）。
 - 字型：Noto Serif Tibetan、Noto Sans Siddham（SIL Open Font License）。
 
 [MIT](LICENSE) © 2026 [Scott G.F. Hong](https://github.com/scottgfhong310)

@@ -40,7 +40,7 @@ public/apps/tibetan-siddham/        # front-end (served at /apps/tibetan-siddham
 ├─ tibetan-siddham-converter.js     # anti-corruption layer: the ONLY conversion interface (ESM, no DOM)
 ├─ tibetan-core.js                  # project Tibetan rules core (initTibetan + ascii2tibetan)
 ├─ data/tibetan.tsv                 # Tibetan mapping table (source of truth)
-├─ vendor/bonji-input/{siddham.js, LICENSE, SOURCE.md}     # vendored Siddhaṁ engine (MIT, unmodified)
+├─ vendor/bonji-input/{siddham.js, LICENSE, SOURCE.md}     # vendored Siddhaṁ engine (MIT; upstream + 14 symbol tokens)
 ├─ fonts/{NotoSerifTibetan-Regular.ttf, NotoSansSiddham-Regular.woff2, *-OFL.txt}
 ├─ i18n.js · locales/{zh-Hant,en,ja}.js
 └─ side-tool.css · materialize-dark.css
@@ -124,7 +124,7 @@ const r = c.convert("siddha;m");
 
 ## Credits
 
-- Siddhaṁ engine: [mandel59/bonji-input](https://github.com/mandel59/bonji-input) (MIT), vendored unmodified.
+- Siddhaṁ engine: [mandel59/bonji-input](https://github.com/mandel59/bonji-input) (MIT); the vendored copy adds 14 symbol tokens on top of upstream and is otherwise identical (see `vendor/bonji-input/SOURCE.md`).
 - Fonts: Noto Serif Tibetan, Noto Sans Siddham (SIL Open Font License).
 
 [MIT](LICENSE) © 2026 [Scott G.F. Hong](https://github.com/scottgfhong310)
