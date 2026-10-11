@@ -7,7 +7,7 @@ I18n.register('en', {
   'input.titlePlaceholder': 'Name this conversion (optional)',
   'input.label': 'Input (ASCII / IAST romanization)',
   'input.placeholder': 'e.g. o;m',
-  'input.hint': 'Notation: <code>;m</code>=ṁ, <code>.h</code>=ḥ, <code>~m</code>=m̐, long vowels <code>aa</code>=ā, <code>ii</code>=ī, <code>uu</code>=ū. When ignoring spaces, type two spaces for a Tibetan separator <code>་</code> (Siddhaṁ has none). Punctuation: <code>|</code> = ། shad, <code>||</code> = ༎ nyis shad, <code>~</code> = 𑗁, <code>~~</code> = ༄ (Siddhaṁ ignores all).',
+  'input.hint': 'Notation: <code>;m</code>=ṁ, <code>.h</code>=ḥ, <code>~m</code>=m̐, long vowels <code>aa</code>=ā, <code>ii</code>=ī, <code>uu</code>=ū. When ignoring spaces, type two spaces for a Tibetan separator <code>་</code> (Siddhaṁ has none). Three spaces give one full-width space (Tibetan and Siddhaṁ). Punctuation: <code>|</code> = ། shad, <code>||</code> = ༎ nyis shad, <code>~</code> = 𑗁, <code>~~</code> = ༄ (Siddhaṁ ignores all).',
   'examples.label': 'Examples:',
   'opt.inputMethod': 'Input method',
   'opt.translit': 'Transliteration',

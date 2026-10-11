@@ -12,7 +12,7 @@ App-specific design decisions (architecture, conversion pipeline, punctuation po
 
 - **Tibetan + Siddhaṁ in one pass** — type a romanized mantra, get the Tibetan-script spelling, the Siddhaṁ script, the Latin transliteration and the Tibetan Unicode code points side by side.
 - **In-browser conversion** — the conversion itself is fully client-side (no round-trip).
-- **Tibetan punctuation** — with *ignore spaces* on, a double space → tsheg `་`; `|` → shad `།`, `||` → nyis shad `༎`, `~` → siddhaṁ sign `𑗁`, `~~` → yig mgo `༄` (Siddhaṁ ignores these marks; it has no separators).
+- **Tibetan punctuation** — with *ignore spaces* on, a double space → tsheg `་`; three spaces → one full-width space (Tibetan and Siddhaṁ, regardless of that option); `|` → shad `།`, `||` → nyis shad `༎`, `~` → siddhaṁ sign `𑗁`, `~~` → yig mgo `༄` (Siddhaṁ ignores these marks; it has no separators).
 - **Input assist** — a glyph palette docked on the right (vowels / consonants / vowel signs / subjoined consonants / punctuation, 108 cells): spot the glyph, click it, and its notation is inserted into the input.
 - **Character chart** — `chart.html` lists `tibetan.tsv` as columns (one per kind), each row showing romanization → Tibetan · Siddhaṁ.
 - **Export / list / reload** — save a conversion as JSON to the server, list / reload / clear exports (see API below).

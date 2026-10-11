@@ -135,18 +135,29 @@ export class TibetanSiddhamConverter {
         //
         // 引擎的其他符號記法（-- ,, .. * 2 @ = *0–*7 o2…）：見 ENGINE_SYMBOL_TOKENS 的說明。
         //   藏文只留 -- → U+115C1，其餘還原成字面；悉曇保留；拉丁全部還原。
+        //
+        // 三個半形空格 → 一個全形空格 U+3000（藏文與悉曇；不論「忽略空格」開關；DESIGN §5.3）：
+        //   先依「三個空格」把 ascii 切段，各段各自轉，段與段之間補 U+3000。由左而右每三個一組，
+        //   剩下的一個或兩個留在後一段的開頭、照原本的規則（兩個 → tsheg、一個 → 音節邊界）。
+        //   切段再轉（而不是轉完再換）是因為兩個引擎都把空格吃掉或改寫了，轉完就認不出原本是幾個；
+        //   各段獨立也讓它自然成為邊界（n␣␣␣a 的悉曇是 n＋virama、a 是獨立母音）。
+        //   藏文：全形空格後面不接 tsheg（同「標點後不接 tsheg」）。拉丁：不動（照舊收斂成一個空格）。
         const SID_BAR = "\u{115C5}"        // 來自 |
         const SID_DBL = "\u{115C9}"        // 來自 ||
         const SIDDHAM_SIGN = "\u{115C1}"   // 𑗁（~ 對應）
         const YIG_MGO = "༄"           // ༄（~~ 對應）
+        const WIDE_SPACE = "\u3000"       // 全形空格（三個半形空格對應）
+        const pieces = ascii.split("   ")
 
-        const tibetan = TibetanSiddhamConverter.restoreSymbols(ascii2tibetan(ascii, { ignoreSpacesAndHyphens }), SIDDHAM_SIGN)
+        const tibetan = TibetanSiddhamConverter.restoreSymbols(
+            pieces.map(piece => ascii2tibetan(piece, { ignoreSpacesAndHyphens })).join(WIDE_SPACE), SIDDHAM_SIGN)
             .split(SID_DBL).join("༎")
             .split(SID_BAR).join("།")
             .split("~~").join(YIG_MGO)        // ~~ → ༄（先處理雙）
             .split("~").join(SIDDHAM_SIGN)    // ~  → 𑗁
             .replace(/([།༎༄\u{115C1}])་/gu, "$1 ")   // 標點後的 tsheg → 一個空格
-        const siddham = ascii2siddham(ascii, { ignoreSpacesAndHyphens })
+            .replace(/\u3000་+/g, WIDE_SPACE)        // 全形空格後的 tsheg → 不輸出
+        const siddham = pieces.map(piece => ascii2siddham(piece, { ignoreSpacesAndHyphens })).join(WIDE_SPACE)
             .split(SID_DBL).join("")          // 悉曇忽略 ||
             .split(SID_BAR).join("")          // 悉曇忽略 |
             .split("~").join("")              // 悉曇忽略 ~ / ~~

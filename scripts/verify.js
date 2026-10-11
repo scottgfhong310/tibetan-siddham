@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * verify.js — tibetan-siddham 的契約檢查（輔助輸入面板 ＋ 引擎符號記法的分流）。
+ * verify.js — tibetan-siddham 的契約檢查（輔助輸入面板 ＋ 引擎符號記法的分流 ＋ 三個空格→全形空格）。
  *
  *   node scripts/verify.js             跑全部檢查（任何一條 FAIL ⇒ exit 1）
  *   node scripts/verify.js --selftest  反向驗證：在記憶體裡把世界改壞，每一種改壞都必須被對應的那一條抓到
@@ -72,8 +72,8 @@ async function loadWorld() {
     data: JSON.parse(read('data/assist.json')),
     signs,
     engineSymbols,
-    convert: (input, inputMethod) => {
-      conv.setOptions({ inputMethod, ignoreSpacesAndHyphens: true });
+    convert: (input, inputMethod, ignore = true) => {
+      conv.setOptions({ inputMethod, ignoreSpacesAndHyphens: ignore });
       return conv.convert(input);
     },
     locales,
@@ -263,6 +263,42 @@ const CHECKS = [
     if (!n) out.push('一個記法都沒有驗到——空的比對不算通過');
     return out;
   } },
+
+  { name: '⑩ 三個半形空格＝一個全形空格（藏文與悉曇；不論忽略空格開關）；一個、兩個空格照舊；拉丁不動', run: (w) => {
+    const out = [];
+    const C = String.fromCodePoint;
+    const W = C(0x3000), TSHEG = C(0x0F0B), SHAD = C(0x0F0D);
+    const T = { ka: KA, ma: MA, n: C(0x0F53, 0x0F84), a: C(0x0F68) };
+    const S = { ka: C(0x1158E), ma: C(0x115A6), n: C(0x115A1, 0x115BF), a: C(0x11580) };
+    const sp = (k) => ' '.repeat(k);
+    // [輸入, 忽略空格, 藏文, 悉曇, 拉丁]——期望值逐字寫死，不由任何轉換函式算出來
+    const cases = [
+      ['ka' + sp(1) + 'ma', true,  T.ka + T.ma,               S.ka + S.ma,               'ka ma'],   // 一個：照舊（對照組）
+      ['ka' + sp(2) + 'ma', true,  T.ka + TSHEG + T.ma,       S.ka + S.ma,               'ka ma'],   // 兩個：照舊是 tsheg
+      ['ka' + sp(3) + 'ma', true,  T.ka + W + T.ma,           S.ka + W + S.ma,           'ka ma'],   // 三個 → 全形
+      ['ka' + sp(3) + 'ma', false, T.ka + W + T.ma,           S.ka + W + S.ma,           'ka ma'],   // 不論忽略與否
+      ['ka' + sp(4) + 'ma', true,  T.ka + W + T.ma,           S.ka + W + S.ma,           'ka ma'],   // 四個＝一組＋剩一個
+      ['ka' + sp(4) + 'ma', false, T.ka + W + T.ma,           S.ka + W + sp(1) + S.ma,   'ka ma'],   // 藏文：全形空格後不接 tsheg
+      ['ka' + sp(5) + 'ma', true,  T.ka + W + T.ma,           S.ka + W + S.ma,           'ka ma'],   // 五個＝一組＋剩兩個（藏文不補 tsheg）
+      ['ka' + sp(6) + 'ma', true,  T.ka + W + W + T.ma,       S.ka + W + W + S.ma,       'ka ma'],   // 六個＝兩組
+      ['n' + sp(3) + 'a',   true,  T.n + W + T.a,             S.n + W + S.a,             'n a'],     // 仍是邊界（悉曇不併成 na）
+      [sp(3) + 'ka',        true,  W + T.ka,                  W + S.ka,                  ' ka'],     // 行首也留著
+      ['ka' + sp(3) + '\nma', true, T.ka + W + '\n' + T.ma,  S.ka + W + '\n' + S.ma,    'ka \nma'], // 貼著換行：換行還在
+      ['ka|' + sp(3) + 'ma', true, T.ka + SHAD + W + T.ma,    S.ka + W + S.ma,           'ka| ma'],  // 標點後
+      ['ka|' + sp(2) + 'ma', true, T.ka + SHAD + ' ' + T.ma,  S.ka + S.ma,               'ka| ma'],  // 「標點後的 tsheg → 空格」那條規則沒被動到
+      ['ka:' + sp(3) + 'ma', true, T.ka + ':' + W + T.ma,     S.ka + ':' + W + S.ma,     'ka: ma'],  // 冒號後面是空白 ⇒ 仍是字面冒號
+    ];
+    for (const [input, ignore, wantTib, wantSid, wantLat] of cases) {
+      for (const m of METHODS) {
+        const r = w.convert(input, m, ignore);
+        const tag = `${JSON.stringify(input)}（${m}、忽略＝${ignore ? '開' : '關'}）`;
+        if (r.tibetan !== wantTib) out.push(`${tag}藏文：得到 ${cp(r.tibetan)}，應為 ${cp(wantTib)}`);
+        if (r.siddham !== wantSid) out.push(`${tag}悉曇：得到 ${cp(r.siddham)}，應為 ${cp(wantSid)}`);
+        if (r.latin !== wantLat) out.push(`${tag}拉丁：得到 ${JSON.stringify(r.latin)}，應為 ${JSON.stringify(wantLat)}`);
+      }
+    }
+    return out;
+  } },
 ];
 
 function run(world) {
@@ -306,6 +342,13 @@ const INJECTIONS = [
   ['悉曇欄留著 | 轉出來的 daṇḍa', 8, (w) => { const f = w.convert; w.convert = (i, m) => { const r = f(i, m); return i === 'ka|ka' ? { ...r, siddham: r.siddham.slice(0, 2) + String.fromCodePoint(0x115C5) + r.siddham.slice(2) } : r; }; }],
   ['引擎的表多一個防腐層不認得的記法', 8, (w) => { w.engineSymbols.push({ token: '#', char: String.fromCodePoint(0x115D8) }); }],
   ['引擎的表是空的（空的比對）', 8, (w) => { w.engineSymbols = []; }],
+  ['藏文欄沒有全形空格（三個空格照舊變 tsheg）', 9, (w) => { const f = w.convert; w.convert = (i, m, g) => { const r = f(i, m, g); return { ...r, tibetan: r.tibetan.split(String.fromCodePoint(0x3000)).join(String.fromCodePoint(0x0F0B)) }; }; }],
+  ['悉曇欄沒有全形空格', 9, (w) => { const f = w.convert; w.convert = (i, m, g) => { const r = f(i, m, g); return { ...r, siddham: r.siddham.split(String.fromCodePoint(0x3000)).join('') }; }; }],
+  ['兩個空格也變成全形空格（tsheg 被吃掉）', 9, (w) => { const f = w.convert; w.convert = (i, m, g) => { const r = f(i, m, g); return { ...r, tibetan: r.tibetan.split(String.fromCodePoint(0x0F0B)).join(String.fromCodePoint(0x3000)) }; }; }],
+  ['只在「忽略空格＝開」時才轉', 9, (w) => { const f = w.convert; w.convert = (i, m, g) => { const r = f(i, m, g); return g === false ? { ...r, siddham: r.siddham.split(String.fromCodePoint(0x3000)).join('   ') } : r; }; }],
+  ['拉丁欄也出現全形空格', 9, (w) => { const f = w.convert; w.convert = (i, m, g) => { const r = f(i, m, g); return { ...r, latin: i.includes('   ') ? r.latin.replace(' ', String.fromCodePoint(0x3000)) : r.latin }; }; }],
+  ['全形空格後面多一個 tsheg', 9, (w) => { const f = w.convert; w.convert = (i, m, g) => { const r = f(i, m, g); return { ...r, tibetan: r.tibetan.split(String.fromCodePoint(0x3000)).join(String.fromCodePoint(0x3000, 0x0F0B)) }; }; }],
+  ['悉曇欄把全形空格兩側併成一個音節（不是邊界）', 9, (w) => { const f = w.convert; w.convert = (i, m, g) => { const r = f(i, m, g); return { ...r, siddham: r.siddham.replace(String.fromCodePoint(0x115BF, 0x3000, 0x11580), String.fromCodePoint(0x3000)) }; }; }],
   ['控制器直接 import 藏文核心', 7, (w) => { w.appJs.find((f) => f.name === 'tibetan-siddham.js').src += '\nimport { ascii2tibetan } from "./tibetan-core.js";'; }],
 ];
 
