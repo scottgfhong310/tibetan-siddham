@@ -46,6 +46,46 @@ export class TibetanSiddhamConverter {
         "T": ".ta", "Th": ".tha", "D": ".da", "Dh": ".dha", "N": ".na", "Sh": ".sa",
     }
 
+    // 引擎的符號記法（vendored 引擎 ascii2symbol 的表；`|` 與 `||` 另有標點政策，不在這裡）。
+    // 引擎在管線最前面就把它們換成悉曇記號，之後三條轉換都原樣留著 ⇒ 由本層依文字分流（DESIGN §5）：
+    //   悉曇：保留（那本來就是悉曇的記號）
+    //   拉丁：還原成輸入的記法（`--` 還是 `--`、`2` 還是 `2`）
+    //   藏文：只有 `--` 留成 U+115C1（與 `~` 同一個字，藏文欄本來就借用它），其餘還原成字面
+    // ⚠️ 這張清單是引擎那張表的鍵的第二份。引擎多了一個記法而這裡沒跟上的話，那個記號會照舊穿進
+    //    拉丁欄與藏文欄——scripts/verify.js 直接讀引擎原始碼的表逐一去驗，漏了會紅。
+    static ENGINE_SYMBOL_TOKENS = [
+        "--", ",,", "..", "*", "2", "@", "=",
+        "*0", "*1", "*2", "*3", "*4", "*5", "*6", "*7",
+        "o2", "o2x", "ox2", "ox3", "ox4", "oxx",
+    ]
+
+    /** @type {Map<string, string> | null} 悉曇記號 → 輸入的記法（第一次用到時向引擎問出來） */
+    static _symbolTokens = null
+
+    /** @returns {Map<string, string>} */
+    static symbolTokens() {
+        if (!TibetanSiddhamConverter._symbolTokens) {
+            const map = new Map()
+            for (const token of TibetanSiddhamConverter.ENGINE_SYMBOL_TOKENS) {
+                // 問引擎「這個記法會變成什麼」，不在這裡再寫一份碼位。
+                // 引擎不認得的記法（例如換回沒有那 14 項的上游）會留下 ASCII ⇒ 不是單一記號，跳過。
+                const out = Array.from(ascii2symbol(token))
+                if (out.length === 1 && /** @type {number} */ (out[0].codePointAt(0)) > 0x7F) map.set(out[0], token)
+            }
+            TibetanSiddhamConverter._symbolTokens = map
+        }
+        return TibetanSiddhamConverter._symbolTokens
+    }
+
+    /**
+     * 把引擎留下的悉曇記號還原成輸入的記法；`keep` 裡的記號原樣留著。
+     * @param {string} text @param {string} [keep] @returns {string}
+     */
+    static restoreSymbols(text, keep = "") {
+        const map = TibetanSiddhamConverter.symbolTokens()
+        return Array.from(text, ch => (map.has(ch) && !keep.includes(ch)) ? map.get(ch) : ch).join("")
+    }
+
     /** @param {Partial<TibetanSiddhamOptions>} [options] */
     constructor(options = {}) {
         /** @type {TibetanSiddhamOptions} */
@@ -92,12 +132,15 @@ export class TibetanSiddhamConverter {
         //         任一標點後若接 tsheg(來自雙空格) → 改成一個普通空格(慣例接空格、非 tsheg)。
         //   悉曇：忽略 | / || / ~ / ~~（不輸出標點）。
         //   拉丁：| / || 還原（IAST daṇḍa 記法）、~ / ~~ 忽略。
+        //
+        // 引擎的其他符號記法（-- ,, .. * 2 @ = *0–*7 o2…）：見 ENGINE_SYMBOL_TOKENS 的說明。
+        //   藏文只留 -- → U+115C1，其餘還原成字面；悉曇保留；拉丁全部還原。
         const SID_BAR = "\u{115C5}"        // 來自 |
         const SID_DBL = "\u{115C9}"        // 來自 ||
         const SIDDHAM_SIGN = "\u{115C1}"   // 𑗁（~ 對應）
         const YIG_MGO = "༄"           // ༄（~~ 對應）
 
-        const tibetan = ascii2tibetan(ascii, { ignoreSpacesAndHyphens })
+        const tibetan = TibetanSiddhamConverter.restoreSymbols(ascii2tibetan(ascii, { ignoreSpacesAndHyphens }), SIDDHAM_SIGN)
             .split(SID_DBL).join("༎")
             .split(SID_BAR).join("།")
             .split("~~").join(YIG_MGO)        // ~~ → ༄（先處理雙）
@@ -108,7 +151,7 @@ export class TibetanSiddhamConverter {
             .split(SID_BAR).join("")          // 悉曇忽略 |
             .split("~").join("")              // 悉曇忽略 ~ / ~~
         // 拉丁轉寫：| / ||（IAST daṇḍa 記法）；~ / ~~ 忽略；再把連續空格收斂成一個
-        const latin = ascii2latin(ascii, { transliteration })
+        const latin = TibetanSiddhamConverter.restoreSymbols(ascii2latin(ascii, { transliteration }))
             .split(SID_DBL).join("||")
             .split(SID_BAR).join("|")
             .split("~").join("")

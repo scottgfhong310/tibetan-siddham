@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * verify.js — tibetan-siddham 的契約檢查（輔助輸入面板）。
+ * verify.js — tibetan-siddham 的契約檢查（輔助輸入面板 ＋ 引擎符號記法的分流）。
  *
  *   node scripts/verify.js             跑全部檢查（任何一條 FAIL ⇒ exit 1）
  *   node scripts/verify.js --selftest  反向驗證：在記憶體裡把世界改壞，每一種改壞都必須被對應的那一條抓到
@@ -59,9 +59,19 @@ async function loadWorld() {
   const locales = {};
   for (const l of LANGS) locales[l] = loadLocale(l);
 
+  // 引擎的符號記法：**直接讀引擎原始碼裡那張表**（記法 → 悉曇記號），不取自防腐層自己的清單——
+  // 防腐層漏了一個記法時，要靠這張表才問得出「還有哪一個沒被分流」。
+  const engineSrc = read('vendor/bonji-input/siddham.js');
+  const table = /const\s+ascii_symbol\s*=\s*\{([\s\S]*?)\n\}/.exec(engineSrc);
+  if (!table) throw new Error('引擎原始碼裡找不到 ascii_symbol 表——檢查的前提不成立');
+  const engineSymbols = Array.from(table[1].matchAll(/"([^"]+)":\s*"\\u\{([0-9a-fA-F]+)\}"/g))
+    .map((m) => ({ token: m[1], char: String.fromCodePoint(parseInt(m[2], 16)) }));
+  if (engineSymbols.length < 9) throw new Error(`ascii_symbol 表只讀到 ${engineSymbols.length} 項——多半是解析壞了`);
+
   return {
     data: JSON.parse(read('data/assist.json')),
     signs,
+    engineSymbols,
     convert: (input, inputMethod) => {
       conv.setOptions({ inputMethod, ignoreSpacesAndHyphens: true });
       return conv.convert(input);
@@ -223,6 +233,36 @@ const CHECKS = [
     }
     return out;
   } },
+
+  { name: '⑨ 引擎的符號記法依文字分流：悉曇保留、拉丁還原成輸入的記法、藏文只留 -- 其餘還原（| 與 || 走標點政策）', run: (w) => {
+    const out = [];
+    const KA_S = String.fromCodePoint(0x1158E);
+    const SIGN = String.fromCodePoint(0x115C1);
+    const TIB = { '|': String.fromCodePoint(0x0F0D), '||': String.fromCodePoint(0x0F0E), '--': SIGN };   // 藏文欄的三個例外
+    const stray = (text, allow) => Array.from(text).filter((ch) => {
+      const c = ch.codePointAt(0);
+      return c >= 0x11580 && c <= 0x115FF && ch !== allow;
+    });
+    let n = 0;
+    for (const { token, char } of w.engineSymbols || []) {
+      const punct = token === '|' || token === '||';
+      for (const m of METHODS) {
+        n++;
+        const r = w.convert('ka' + token + 'ka', m);
+        const wantTib = KA + (token in TIB ? TIB[token] : token) + KA;
+        const wantSid = KA_S + (punct ? '' : char) + KA_S;
+        const wantLat = 'ka' + token + 'ka';
+        if (r.tibetan !== wantTib) out.push(`${JSON.stringify(token)}（${m}）藏文：得到 ${cp(r.tibetan)}，應為 ${cp(wantTib)}`);
+        if (r.siddham !== wantSid) out.push(`${JSON.stringify(token)}（${m}）悉曇：得到 ${cp(r.siddham)}，應為 ${cp(wantSid)}`);
+        if (r.latin !== wantLat) out.push(`${JSON.stringify(token)}（${m}）拉丁：得到 ${JSON.stringify(r.latin)}，應為 ${JSON.stringify(wantLat)}`);
+        // 與上面三條不同源的一個性質：拉丁欄不該有任何悉曇區的字；藏文欄只准有借用的那一個
+        if (stray(r.latin, '').length) out.push(`${JSON.stringify(token)}（${m}）拉丁欄出現悉曇字 ${cp(stray(r.latin, '').join(''))}`);
+        if (stray(r.tibetan, SIGN).length) out.push(`${JSON.stringify(token)}（${m}）藏文欄出現借用以外的悉曇字 ${cp(stray(r.tibetan, SIGN).join(''))}`);
+      }
+    }
+    if (!n) out.push('一個記法都沒有驗到——空的比對不算通過');
+    return out;
+  } },
 ];
 
 function run(world) {
@@ -259,6 +299,13 @@ const INJECTIONS = [
   ['頁面上沒有開關鈕', 6, (w) => { w.html = w.html.replace('id="setting-assist"', 'id="setting-other"'); }],
   ['assist.js 註解以外提到引擎路徑', 7, (w) => { w.assistSrc += '\nvar E = "./vendor/bonji-input/siddham.js";'; }],
   ['assist.js import 了防腐層', 7, (w) => { w.assistSrc = 'import { X } from "./tibetan-siddham-converter.js";\n' + w.assistSrc; }],
+  ['拉丁欄不再還原（數字 2 留成悉曇記號）', 8, (w) => { const f = w.convert; w.convert = (i, m) => { const r = f(i, m); return { ...r, latin: r.latin.replace('ka2ka', 'ka' + String.fromCodePoint(0x115C6) + 'ka') }; }; }],
+  ['藏文欄照舊借用悉曇記號（* 沒有還原）', 8, (w) => { const f = w.convert; w.convert = (i, m) => { const r = f(i, m); return { ...r, tibetan: r.tibetan.replace('*', String.fromCodePoint(0x115C4)) }; }; }],
+  ['藏文欄把 -- 也還原成字面', 8, (w) => { const f = w.convert; w.convert = (i, m) => { const r = f(i, m); return { ...r, tibetan: r.tibetan.replace(String.fromCodePoint(0x115C1), '--') }; }; }],
+  ['悉曇欄把符號拿掉', 8, (w) => { const f = w.convert; w.convert = (i, m) => { const r = f(i, m); return { ...r, siddham: Array.from(r.siddham).filter((ch) => ch === String.fromCodePoint(0x1158E)).join('') }; }; }],
+  ['悉曇欄留著 | 轉出來的 daṇḍa', 8, (w) => { const f = w.convert; w.convert = (i, m) => { const r = f(i, m); return i === 'ka|ka' ? { ...r, siddham: r.siddham.slice(0, 2) + String.fromCodePoint(0x115C5) + r.siddham.slice(2) } : r; }; }],
+  ['引擎的表多一個防腐層不認得的記法', 8, (w) => { w.engineSymbols.push({ token: '#', char: String.fromCodePoint(0x115D8) }); }],
+  ['引擎的表是空的（空的比對）', 8, (w) => { w.engineSymbols = []; }],
   ['控制器直接 import 藏文核心', 7, (w) => { w.appJs.find((f) => f.name === 'tibetan-siddham.js').src += '\nimport { ascii2tibetan } from "./tibetan-core.js";'; }],
 ];
 
@@ -267,6 +314,7 @@ function cloneWorld(w) {
     ...w,
     data: JSON.parse(JSON.stringify(w.data)),
     locales: JSON.parse(JSON.stringify(w.locales)),
+    engineSymbols: w.engineSymbols.map((e) => ({ ...e })),
     appJs: w.appJs.map((f) => ({ ...f })),
   };
 }
@@ -309,6 +357,6 @@ function selftest(world) {
     else console.log('PASS  ' + r.title);
   }
   const cells = world.data.categories.reduce((n, c) => n + c.entries.length, 0);
-  console.log(`\n${res.length - fail} PASS ／ ${fail} FAIL（共 ${res.length} 條；面板 ${cells} 格）`);
+  console.log(`\n${res.length - fail} PASS ／ ${fail} FAIL（共 ${res.length} 條；面板 ${cells} 格、引擎符號記法 ${world.engineSymbols.length} 個）`);
   process.exit(fail ? 1 : 0);
 })();
