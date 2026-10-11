@@ -13,6 +13,7 @@ App-specific design decisions (architecture, conversion pipeline, punctuation po
 - **Tibetan + Siddhaṁ in one pass** — type a romanized mantra, get the Tibetan-script spelling, the Siddhaṁ script, the Latin transliteration and the Tibetan Unicode code points side by side.
 - **In-browser conversion** — the conversion itself is fully client-side (no round-trip).
 - **Tibetan punctuation** — with *ignore spaces* on, a double space → tsheg `་`; `|` → shad `།`, `||` → nyis shad `༎`, `~` → siddhaṁ sign `𑗁`, `~~` → yig mgo `༄` (Siddhaṁ ignores these marks; it has no separators).
+- **Input assist** — a glyph palette docked on the right (vowels / consonants / vowel signs / subjoined consonants / punctuation, 108 cells): spot the glyph, click it, and its notation is inserted into the input.
 - **Character chart** — `chart.html` lists `tibetan.tsv` as columns (one per kind), each row showing romanization → Tibetan · Siddhaṁ.
 - **Export / list / reload** — save a conversion as JSON to the server, list / reload / clear exports (see API below).
 - **Embeddable core** — the only conversion surface is `TibetanSiddhamConverter` (an anti-corruption layer; pure logic, no DOM).
@@ -24,6 +25,7 @@ App-specific design decisions (architecture, conversion pipeline, punctuation po
 npm install
 npm start                 # → http://localhost:3000/apps/tibetan-siddham/
 # PORT=4070 npm start     # run on another port
+npm run verify            # contract checks: every assist cell is checked against the converter
 ```
 
 `/` redirects (302) to `/apps/tibetan-siddham/`.
@@ -37,13 +39,14 @@ public/download/tibetan-siddham/.gitkeep   # exported JSON lands here (contents 
 public/apps/tibetan-siddham/        # front-end (served at /apps/tibetan-siddham/)
 ├─ index.html · tibetan-siddham.css · tibetan-siddham.js   # converter page: structure / style / glue (ESM module)
 ├─ chart.html · chart.css · chart.js · tibetan-table.js    # character chart page (one column per kind)
+├─ assist.js · assist.css · data/assist.json   # input-assist panel (5 categories, 108 cells)
 ├─ tibetan-siddham-converter.js     # anti-corruption layer: the ONLY conversion interface (ESM, no DOM)
 ├─ tibetan-core.js                  # project Tibetan rules core (initTibetan + ascii2tibetan)
 ├─ data/tibetan.tsv                 # Tibetan mapping table (source of truth)
 ├─ vendor/bonji-input/{siddham.js, LICENSE, SOURCE.md}     # vendored Siddhaṁ engine (MIT; upstream + 14 symbol tokens)
 ├─ fonts/{NotoSerifTibetan-Regular.ttf, NotoSansSiddham-Regular.woff2, *-OFL.txt}
 ├─ i18n.js · locales/{zh-Hant,en,ja}.js
-└─ side-tool.css · materialize-dark.css
+└─ side-tool.css · side-tool.js · filter-clear.css · filter-clear.js · materialize-dark.css   # shared family assets
 ```
 
 ## API (`routes/tibetan-siddham.js`, `{ ok }` envelope)
@@ -120,7 +123,7 @@ const r = c.convert("siddha;m");
 - **Backend toggle — `config.json`:** `public/apps/tibetan-siddham/config.json` holds `{ "backend": true | false }`, read by the front-end at startup. `true` (default) uses the server export/list/reload/clear (download = export then download). `false` hides those three tools, makes the download button a client-side Blob, and calls no `/api` — so the app can be served as pure static files (e.g. GitHub Pages). The route stays mounted but idle when off.
 - **Conversion is client-side; export/list needs the Node server.** The Tibetan core does one same-origin `fetch` of `data/tibetan.tsv` at startup; the Siddhaṁ engine does no runtime fetch. Because of the export/list API, this app needs its Node server (not GitHub-Pages static).
 - **Fonts:** Tibetan ships as TTF (no woff2 build tooling on hand); Siddhaṁ as woff2. Converting Tibetan to woff2 is a future cleanup.
-- **Deferred:** live-IME typing, the on-screen virtual keyboard and Devanāgarī input (all present in the incubator prototype) are intentionally not included yet.
+- **Deferred:** live-IME typing, Devanāgarī input and the remaining tabs of the on-screen virtual keyboard (all present in the incubator prototype) are not included yet; the keyboard's five "Tibetan Sanskrit" groups now ship as the input-assist panel.
 
 ## Credits
 

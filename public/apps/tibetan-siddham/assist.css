@@ -1,0 +1,237 @@
+/* assist.css — 輔助輸入字形選盤（index.html）。資料：data/assist.json。
+ * 形制照 `bonji` 的 assist.css（固定在右側的 dock、覆蓋式、不推主畫面）；
+ * 主題 token / 卡片沿用 tibetan-siddham.css，字型也是那裡宣告的兩支內嵌字型——
+ * 本面板**不讀任何本機字型**（bonji 那邊的 local() 與缺字型說明在這裡都不需要）。
+ * 開關鈕 .side-tool.active 的樣式在共用 side-tool.css，這裡不重複。 */
+
+/* 開啟時隱藏 side-tools、dock 貼齊右緣（right:12）；按面板上的「工具列」鈕可再叫出
+ * side-tools，此時 dock 自動讓出空間（right:70）避免被工具列蓋住。 */
+.assist-panel {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  overflow: hidden;       /* 內部 .assist-scroll 自行捲動 */
+  box-shadow: 0 10px 34px rgba(0, 0, 0, .4);
+  transition: right .15s ease;
+}
+.assist-panel[hidden] {
+  display: none;
+}
+
+body.assist-open .side-tools {
+  opacity: 0;
+  pointer-events: none;
+}
+body.assist-open.assist-tools .side-tools {
+  opacity: 1;
+  pointer-events: auto;
+}
+body.assist-open.assist-tools .assist-panel {
+  right: 70px;
+}
+
+.assist-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex: 0 0 auto;
+}
+.assist-title {
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+.assist-head-actions {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+.assist-iconbtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.assist-iconbtn:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+.assist-iconbtn.active {
+  color: var(--accent);
+}
+.assist-iconbtn i.material-icons {
+  font-size: 20px;
+}
+
+/* 搜尋框：filter-clear.js 會把它包進 .filter-clear-wrap，外距掛在包裝上才不會被吃掉 */
+.assist-panel .filter-clear-wrap {
+  display: block;
+  margin-bottom: 12px;
+  flex: 0 0 auto;
+}
+.assist-search {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 6px 10px;
+  font-size: .85rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  outline: none;
+}
+.assist-search:focus {
+  border-color: var(--accent);
+}
+
+.assist-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex: 0 0 auto;
+}
+.assist-cat {
+  cursor: pointer;
+  font-size: .76rem;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: transparent;
+  user-select: none;
+  white-space: nowrap;
+}
+.assist-cat.active {
+  color: var(--text);
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+
+.assist-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.assist-section[hidden] {
+  display: none;
+}
+.assist-section-title {
+  font-size: .72rem;
+  color: var(--muted);
+  margin: 8px 0 6px;
+}
+.assist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.ia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 2px 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .1s, background .1s, transform .05s;
+  user-select: none;
+}
+.ia:hover {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.ia:active {
+  transform: translateY(1px);
+}
+.ia[hidden] {
+  display: none;
+}
+/* 沒有記法（固定形的下加字）：僅供辨認、不可插入 */
+.ia.noinput {
+  cursor: default;
+  opacity: .5;
+}
+.ia.noinput:hover {
+  border-color: var(--border);
+  background: var(--surface-2);
+}
+
+/* 字型與輸出欄的 .tibetan-text 同一組（tibetan-siddham.css）：藏文優先，
+ * 借用的悉曇記號落到內嵌的 Noto Sans Siddham。藏文的下加字與母音記號疊得高，行高要留夠。 */
+.ia-char {
+  font-family: 'Noto Serif Tibetan', "Jomolhari", 'Noto Sans Siddham', serif;
+  font-size: 1.5rem;
+  line-height: 1.9;
+}
+.ia-code {
+  font-size: .68rem;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  min-height: 1em;
+  word-break: break-all;
+}
+
+.assist-empty {
+  color: var(--muted);
+  font-size: .82rem;
+  padding: 8px 2px;
+}
+
+/* 底部輔助按鈕列：空格 / 換行 / 連字號（固定在 dock 底、不隨字形捲動） */
+.assist-controls {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.assist-ctrl {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: .8rem;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color .1s, background .1s, transform .05s;
+}
+.assist-ctrl:hover {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.assist-ctrl:active {
+  transform: translateY(1px);
+}
+.assist-ctrl i.material-icons {
+  font-size: 18px;
+  color: var(--muted);
+}

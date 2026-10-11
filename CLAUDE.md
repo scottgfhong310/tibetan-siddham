@@ -16,12 +16,14 @@ public/download/tibetan-siddham/.gitkeep   # 匯出 JSON 落在這（內容 giti
 public/apps/tibetan-siddham/        # 前端(服務於 /apps/tibetan-siddham/)
 ├─ index.html · tibetan-siddham.css · tibetan-siddham.js   # 轉換器頁:結構 / 樣式 / 膠水(ESM module)
 ├─ chart.html · chart.css · chart.js · tibetan-table.js    # 字元對照表頁(一個 kind 一欄)
+├─ assist.js · assist.css · data/assist.json   # 輔助輸入面板(五類 108 格;classic、與控制器解耦;DESIGN §13)
 ├─ tibetan-siddham-converter.js     # 防腐層:唯一對外轉換介面(ESM、不碰 DOM)
 ├─ tibetan-core.js                  # 本專案藏文規則核心(initTibetan + ascii2tibetan;會 fetch ./data/tibetan.tsv)
 ├─ data/tibetan.tsv                 # 藏文對照表(source of truth;kind/token/out/comment)
 ├─ vendor/bonji-input/{siddham.js, LICENSE, SOURCE.md}     # vendored 悉曇引擎(MIT;上游＋14 個符號記法、勿再改邏輯)
 ├─ fonts/{NotoSerifTibetan-Regular.ttf, NotoSansSiddham-Regular.woff2, *-OFL.txt}
 ├─ side-tool.css · side-tool.js · materialize-dark.css   # 家族共用側鍵（樣式＋setIconDone 行為；權威版＝家族 repo，§5.5）
+├─ filter-clear.css · filter-clear.js   # 家族共用：搜尋框清除鈕（權威版在 app `local-reader`，§5.12）
 └─ i18n.js · locales/{zh-Hant,en,ja}.js
 ```
 
@@ -29,6 +31,8 @@ public/apps/tibetan-siddham/        # 前端(服務於 /apps/tibetan-siddham/)
 
 ```bash
 npm install && npm start            # → http://localhost:3000/apps/tibetan-siddham/
+npm run verify                      # 8 條契約檢查（輔助輸入的每一格對防腐層逐格驗）
+node scripts/verify.js --selftest   # 23 個反向注入，全部必須被對應的那一條抓到
 ```
 
 驗證以 preview 實跑:`/` 應 302 → `/apps/tibetan-siddham/`、資產 200、轉換正確、i18n 三語、主題 light/dark 切換。
@@ -45,6 +49,7 @@ npm install && npm start            # → http://localhost:3000/apps/tibetan-sid
 - **後端開關 `config.json`**:`public/apps/tibetan-siddham/config.json` 的 `{ "backend": true|false }` 由前端 `tibetan-siddham.js` 在 `init` 讀取(`loadConfig`)。`true`(預設)＝用後端(匯出/清單/載回/清空、下載＝先匯出再下載);`false`＝純前端(隱藏 downloads/export/clear-downloads 三工具、下載改 Blob、不打 `/api`),可純靜態託管。讀不到 config 視為 `false`(無伺服器)。後端 route 永遠掛著、`false` 時閒置不被呼叫。
 - **標點(集中在 converter ACL,藏文為主、悉曇僅對照)**:忽略空格時雙空格→tsheg `་`;`|`→shad `།`、`||`→nyis-shad `༎`、`~`→siddhaṁ 符 `𑗁`、`~~`→yig mgo `༄`;任一標點後接 tsheg(來自雙空格)→改一個空格。悉曇忽略 `| || ~ ~~`、拉丁 `|`/`||` 保留、`~`/`~~` 忽略。`~m`/`~n` 是既有 token(candrabindu/ña)不受影響。`𑗁` 借用悉曇字,`.tibetan-text` 字型 fallback 含 `Noto Sans Siddham` 以免缺字。
 - **對照表頁 `chart.html`**:`tibetan-table.js`(純解析 TSV)+ `chart.js`(渲染);一個 kind 一欄,每列 token → 藏文 │ 悉曇(`siddhamForToken`)│ 說明;組合字元加 ◌、無對應 —。以 `window.open` 新分頁開啟(保留 opener),返回鈕關回原分頁。
-- **延後(尚未做)**:即時 IME 打字、螢幕虛擬鍵盤(VK)、Devanāgarī 輸入 —— 都在孵化器原型 `InProgress/public/apps/tibetan/` 有。
+- **輔助輸入**(`keyboard` 側邊工具、DESIGN §13):固定在右側的藏文字形選盤,形制照 `bonji`、鍵位來自原型 VK 的「藏文梵字」五組——母音 16／子音 34／元音符號 16／下加輔音 37／標點 5,共 **108** 格(`data/assist.json`)。點一格 → 記法插入 `#ts-input` 游標處並派發 `input`,控制器即時重轉。⚠️ **改 `assist.json` 或 `tibetan.tsv` 之後跑 `npm run verify`**:每一格的字形是資料寫的、轉出什麼是防腐層算的,兩邊會各自漂。⚠️ **子音鍵帶隱含 a**(`ka`),之後按元音符號 `i` 會得到 `kai`;要接母音用下加輔音那一組的記法(`k`＋`i`)——與 `bonji` 同一個慣例,面板不替使用者改寫前一個字。⚠️ 標點一組依本 app 的 §5,不照抄原型(不收 `--`／`/`／`.`／全形)。`assist.js` 是 classic IIFE、不 import 模組、不碰轉換(第 ⑧ 條)。
+- **延後(尚未做)**:即時 IME 打字、Devanāgarī 輸入、螢幕虛擬鍵盤(VK)的其餘分頁 —— 都在孵化器原型有(2026-10-11 起原型是 private repo `tibetan`)。VK 的「藏文梵字」五組已以輔助輸入的形式進來。
 - **轉換管線**:原文 → `ascii2symbol` → `latin2ascii(inputMethod)` → 共用 ascii → `ascii2tibetan` / `ascii2siddham` / `ascii2latin`(沿用孵化器原型的驗證路徑)。
 - **來源**:由 `InProgress/public/apps/tibetan/`(孵化器原型,fork 自 bonji-input + 自製藏文核心)抽取乾淨資產而成;`tibetan-core.js`←`lib/tibetan.js`、`data/tibetan.tsv`←`lib/data/tibetan.tsv`、`vendor/.../siddham.js`←`lib/siddham.js`。

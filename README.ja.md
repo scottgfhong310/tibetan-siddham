@@ -12,6 +12,7 @@
 - **チベット文字 + 悉曇を一度に** — ローマ字転写の真言を入力すると、チベット文字の綴り・悉曇文字・ラテン翻字・チベット文字の Unicode コードポイントを並べて表示。
 - **ブラウザ内変換** — 変換そのものは完全にクライアント側（往復なし）。
 - **チベット文字の約物** — スペース無視時、スペース2回 → tsheg `་`；`|` → shad `།`、`||` → nyis shad `༎`、`~` → siddhaṁ 符 `𑗁`、`~~` → yig mgo `༄`（悉曇はこれらを無視。区切り記号を持たない）。
+- **入力補助** — 右側に固定されるチベット文字のパレット（母音／子音／母音記号／下接子音／句読点、計 108 マス）。字形を見つけてクリックすると、その記法が入力欄に挿入されます。
 - **文字対照表** — `chart.html` が `tibetan.tsv` を列（kind ごとに 1 列）で表示し、各行で ローマ字転写 → チベット文字 · 悉曇 を示す。
 - **書き出し / 一覧 / 読み込み** — 変換を JSON としてサーバーに保存し、一覧 / 読み込み / 消去（下記 API 参照）。
 - **組込み可能なコア** — 唯一の変換インターフェースは `TibetanSiddhamConverter`（防腐層。純ロジック、DOM 非依存）。
@@ -23,6 +24,7 @@
 npm install
 npm start                 # → http://localhost:3000/apps/tibetan-siddham/
 # PORT=4070 npm start     # 別ポートで起動
+npm run verify            # 契約チェック：入力補助の各マスを変換器と照合
 ```
 
 ルート `/` は `/apps/tibetan-siddham/` に 302 リダイレクトします。
@@ -36,13 +38,14 @@ public/download/tibetan-siddham/.gitkeep   # 書き出し JSON はここ（内�
 public/apps/tibetan-siddham/        # フロントエンド（/apps/tibetan-siddham/ で配信）
 ├─ index.html · tibetan-siddham.css · tibetan-siddham.js   # コンバーター：構造 / スタイル / グルー（ESM module）
 ├─ chart.html · chart.css · chart.js · tibetan-table.js    # 文字対照表ページ（kind ごとに 1 列）
+├─ assist.js · assist.css · data/assist.json   # 入力補助パネル（5 分類・108 マス）
 ├─ tibetan-siddham-converter.js     # 防腐層：唯一の変換インターフェース（ESM、DOM 非依存）
 ├─ tibetan-core.js                  # 本プロジェクトのチベット文字規則コア（initTibetan + ascii2tibetan）
 ├─ data/tibetan.tsv                 # チベット文字対照表（source of truth）
 ├─ vendor/bonji-input/{siddham.js, LICENSE, SOURCE.md}     # vendored 悉曇エンジン（MIT；上流＋記号記法 14 項目）
 ├─ fonts/{NotoSerifTibetan-Regular.ttf, NotoSansSiddham-Regular.woff2, *-OFL.txt}
 ├─ i18n.js · locales/{zh-Hant,en,ja}.js
-└─ side-tool.css · materialize-dark.css
+└─ side-tool.css · side-tool.js · filter-clear.css · filter-clear.js · materialize-dark.css   # ファミリー共通アセット
 ```
 
 ## API（`routes/tibetan-siddham.js`、`{ ok }` エンベロープ）
@@ -119,7 +122,7 @@ const r = c.convert("siddha;m");
 - **バックエンド切替 `config.json`**：`public/apps/tibetan-siddham/config.json` の `{ "backend": true | false }` を起動時にフロントが読み込む。`true`（既定）＝サーバーの書き出し / 一覧 / 読み込み / 消去を使用（ダウンロード＝先に書き出してからダウンロード）。`false`＝その 3 つのツールを隠し、ダウンロードをクライアント側 Blob にし、`/api` を呼ばない → 純静的ホスティング（GitHub Pages など）が可能。オフ時もルートは載っているが未使用。
 - **変換はクライアント側、書き出し / 一覧はサーバーが必要**：チベット文字コアは起動時に `data/tibetan.tsv` を 1 回だけ同一オリジンで `fetch`（悉曇エンジンは runtime fetch なし）。書き出し / 一覧を有効にする場合はこの Node サーバーが必要（オフなら純静的でも可）。
 - **フォント**：チベット文字は TTF（手元に woff2 変換ツールがないため）、悉曇は woff2。チベット文字の woff2 化は今後の整理項目。
-- **未実装（後回し）**：ライブ IME 入力、画面上の仮想キーボード、Devanāgarī 入力（いずれもインキュベーター原型に存在）。
+- **未実装（後回し）**：ライブ IME 入力、Devanāgarī 入力、画面上の仮想キーボードの残りのタブ（いずれもインキュベーター原型に存在）。仮想キーボードの「チベット文字の梵字」5 グループは入力補助として取り込み済み。
 
 ## クレジット
 

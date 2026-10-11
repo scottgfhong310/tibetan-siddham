@@ -25,6 +25,8 @@ tibetan-siddham-converter.js         ← 防腐層 ACL：唯一對外轉換介�
   │            ├── tibetan-core.js                  ← 本專案藏文核心（規則表驅動）
   │            │       └── data/tibetan.tsv         ← source of truth
   │            └── vendor/bonji-input/siddham.js    ← vendored 悉曇引擎（MIT；上游 ＋ 14 個符號記法，見其 SOURCE.md）
+
+assist.js ─→ data/assist.json        ← 輔助輸入面板（§13）：classic、不 import 模組、不經 converter，只對 #ts-input 插字
 ```
 
 **邊界紀律（硬約束）**：
@@ -153,11 +155,37 @@ tibetan-siddham-converter.js         ← 防腐層 ACL：唯一對外轉換介�
 
 ## 11. 延後 / 未做（Deferred）
 
-孵化器原型 `InProgress/public/apps/tibetan/` 有、但本 app **第一階段未做**：即時 IME 逐鍵輸入法、螢幕虛擬鍵盤（VK）、Devanāgarī（天城體）輸入。
+孵化器原型 `InProgress/public/apps/tibetan/` 有、但本 app **尚未做**：即時 IME 逐鍵輸入法、Devanāgarī（天城體）輸入，以及螢幕虛擬鍵盤（VK）的其餘分頁（悉曇、天城體、藏文 Unicode 區塊）。
+
+VK 的「藏文梵字」五組已於 2026-10-11 以**輔助輸入面板**的形式進來（§13）——它只做「點一格插入記法」，不是 IME。
 
 ## 12. 來源（Provenance）
 
 由孵化器原型 `InProgress/public/apps/tibetan/`（fork 自 bonji-input + 自製藏文核心）抽取乾淨資產而成：`tibetan-core.js`←`lib/tibetan.js`、`data/tibetan.tsv`←`lib/data/tibetan.tsv`、`vendor/bonji-input/siddham.js`←`lib/siddham.js`。
+
+## 13. 輔助輸入面板（index.html）
+
+看著藏文字形、在面板裡認出它、點一下就把它的羅馬記法插進輸入欄。**形制照 `bonji` 的輔助輸入**（固定在右側的 dock、搜尋、分類 chips、底部輔助鈕；`assist.js` + `assist.css`），**鍵位由孵化器原型 `tibetan` 的虛擬鍵盤「藏文梵字」五組整理而來**。
+
+| 類 | 格數 | 每一格插入什麼 |
+|---|---|---|
+| 母音（獨立元音） | 16 | `a` `aa` … `a;m` `a.h` |
+| 子音 | 34 | 全形、**帶隱含 a**：`ka` `kha` … `k.sa` |
+| 元音符號 | 16 | `a`（隱含 a，只畫載體）`aa` `i` … `;m` `.h` |
+| 下加輔音 | 37 | **不帶 a**：`k` `kh` … `k.s`；其中 3 格是固定形、不可插入 |
+| 標點 | 5 | 兩個空格（tsheg）、`\|`、`\|\|`、`~`、`~~` |
+
+合計 **108** 格。
+
+- **資料 `data/assist.json`**（策展、可手改）：`categories[].entries[]`，每格 `code`（記法）＋ `char`（字形，NFC）＋選用的 `label`／`note`。類別上的 `carrier` 表示「這一類是組合字元，畫的時候前面加點圈」——**哪一類要加載體寫在資料裡，`assist.js` 不判斷碼位範圍**（`chart.js` 已有一份碼位範圍的判斷，再寫一份就是同一條規則兩份實作）。
+- **每一格說的話由 `scripts/verify.js` 逐格驗**：把記法真的餵給防腐層，藏文輸出要等於那一格的字形，ISO 15919 與 Kyoto-Harvard 兩種輸入法各驗一次。字形來自資料、輸出來自轉換器，兩邊不同源，比對才有意義。驗的時候子音／母音直接比，元音符號接在 `k` 之後，下加輔音接在 `m` 之後（`k`／`g`／`t`… 後面接 `h` 會變成送氣音，`m` 不與任何字母併成別的記法），標點夾在兩個音節之間。
+- ⚠️ **子音鍵帶隱含 a，所以「子音鍵＋元音符號鍵」不是你以為的那個字**：`ka` 之後再按 `i` 是 `kai`＝ཀཻ（ai）。要接母音請用**下加輔音**那一組的記法（不帶 a）：`k` ＋ `i` ＝ ཀི——音節開頭的 `k` 照樣畫成全形。這與 `bonji` 面板的「子音／體文／接續」是同一個慣例；面板只插入記法，不替你改寫前一個字。
+- **「不可插入」的 3 格**（下加輔音裡的固定形 U+0FBA／U+0FBB／U+0FBC）：轉換器不產生它們，留著是為了辨認；點了只出提示（`assist.noinput`）。第 ④ 條檢查盯著它們**真的打不出來**。
+- **標點一組依本 app 的標點政策（§5），不是照抄原型**：原型那一組的 `--`（࿓）、`/`、`.` 與三個全形鍵是它 IME 模式才有的行為，本 app 沒有 ⇒ 不收；另收原型沒有的 `~`（𑗁）與 tsheg（兩個空格）。⚠️ `--` 在本 app 會被引擎轉成 𑗁 而且三欄都出現（§5 沒有列這一項），面板刻意不放它。
+- **與原型的另外三處不同**：`tha` 那一格原型的標籤誤植成字面 `tha`，這裡是 ཐ；字形一律存 NFC（藏文的預組字元如 U+0F43 在 NFC 下會拆開，而轉換器的輸出是 NFC）；三個固定形在原型裡按下去會插入一般的 `y`／`r`／`v`，這裡改成不可插入。
+- **與控制器解耦**：`assist.js` 是 classic IIFE、不 import 任何模組，只碰 `#ts-input` 與 `#setting-assist`；點一格 → 插入游標處 → 派發 `input` 事件，控制器既有的監聽即時重轉。
+- **版面**同 `bonji`：`position: fixed` 覆蓋式、不推主畫面；開啟時隱藏 side-tools，標題列 ⋮ 鈕可再叫出（此時 dock 讓到 `right: 70px`）、× 關閉。開關狀態存 `localStorage`（`tibetan-siddham-assist-open`）。底部三顆輔助鈕：空格／換行／連字號。搜尋框掛家族共用的 `filter-clear`（§5.12）。
+- **與 `bonji` 不同的兩點**：只有一個群（一排 chips）；**不讀任何本機字型**（全部是隨附的 Noto Serif Tibetan，借用的 𑗁 落到 Noto Sans Siddham），所以沒有缺字型說明那一段。另外開啟面板時不把焦點搶到搜尋框——游標留在輸入欄。
 
 ---
 

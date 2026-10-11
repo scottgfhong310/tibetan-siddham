@@ -4,7 +4,8 @@
   "description": "把 ASCII / IAST 羅馬轉寫轉成藏文梵字、悉曇（Siddhaṁ）文字、拉丁轉寫與 Unicode 碼位的單頁 WebApp；藏文核心為本專案規則表，悉曇用 vendored bonji-input 引擎，兩者包在 TibetanSiddhamConverter 防腐層之後。",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "verify": "node scripts/verify.js"
   },
   "keywords": [
     "tibetan",

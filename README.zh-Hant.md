@@ -12,6 +12,7 @@
 - **藏文 + 悉曇一次到位** — 輸入羅馬轉寫的梵字咒語，同時得到藏文拼寫、悉曇文字、拉丁轉寫與藏文 Unicode 碼位。
 - **瀏覽器內轉換** — 轉換本身全在前端（不走伺服器往返）。
 - **藏文標點** — 開「忽略空格」時，雙空格 → tsheg `་`；`|` → shad `།`、`||` → nyis shad `༎`、`~` → siddhaṁ 符 `𑗁`、`~~` → yig mgo `༄`（悉曇忽略這些標點，它本無分隔符）。
+- **輔助輸入** — 右側的藏文字形選盤（母音／子音／元音符號／下加輔音／標點，共 108 格）：認出字形、點一下，記法就插進輸入欄。
 - **字元對照表** — `chart.html` 把 `tibetan.tsv` 排成欄（一個 kind 一欄），每列顯示 羅馬轉寫 → 藏文 · 悉曇。
 - **匯出 / 清單 / 載回** — 把一次轉換存成 JSON 到伺服器，可列出 / 載回 / 清空（見下方 API）。
 - **可嵌入核心** — 唯一對外轉換介面是 `TibetanSiddhamConverter`（防腐層；純邏輯、不碰 DOM）。
@@ -23,6 +24,7 @@
 npm install
 npm start                 # → http://localhost:3000/apps/tibetan-siddham/
 # PORT=4070 npm start     # 用其他 port
+npm run verify            # 契約檢查：輔助輸入的每一格對轉換器逐格驗
 ```
 
 根路徑 `/` 會 302 轉址到 `/apps/tibetan-siddham/`。
@@ -36,13 +38,14 @@ public/download/tibetan-siddham/.gitkeep   # 匯出 JSON 落在這（內容不�
 public/apps/tibetan-siddham/        # 前端（服務於 /apps/tibetan-siddham/）
 ├─ index.html · tibetan-siddham.css · tibetan-siddham.js   # 轉換器頁：結構 / 樣式 / 膠水（ESM module）
 ├─ chart.html · chart.css · chart.js · tibetan-table.js    # 字元對照表頁（一個 kind 一欄）
+├─ assist.js · assist.css · data/assist.json   # 輔助輸入面板（五類 108 格）
 ├─ tibetan-siddham-converter.js     # 防腐層：唯一對外轉換介面（ESM、不碰 DOM）
 ├─ tibetan-core.js                  # 本專案藏文規則核心（initTibetan + ascii2tibetan）
 ├─ data/tibetan.tsv                 # 藏文對照表（source of truth）
 ├─ vendor/bonji-input/{siddham.js, LICENSE, SOURCE.md}     # vendored 悉曇引擎（MIT；上游＋14 個符號記法）
 ├─ fonts/{NotoSerifTibetan-Regular.ttf, NotoSansSiddham-Regular.woff2, *-OFL.txt}
 ├─ i18n.js · locales/{zh-Hant,en,ja}.js
-└─ side-tool.css · materialize-dark.css
+└─ side-tool.css · side-tool.js · filter-clear.css · filter-clear.js · materialize-dark.css   # 家族共用件
 ```
 
 ## API（`routes/tibetan-siddham.js`，`{ ok }` 信封）
@@ -119,7 +122,7 @@ const r = c.convert("siddha;m");
 - **後端開關 `config.json`**：`public/apps/tibetan-siddham/config.json` 的 `{ "backend": true | false }` 由前端啟動時讀取。`true`（預設）＝用伺服器匯出/清單/載回/清空（下載＝先匯出再下載）；`false`＝隱藏那三個工具、下載改純前端 Blob、不打 `/api`，本 app 即可純靜態託管（如 GitHub Pages）。關閉時後端 route 仍掛著但閒置。
 - **轉換在前端、匯出/列表需後端**：藏文核心啟動時對 `data/tibetan.tsv` 做一次同源 `fetch`，悉曇引擎無 runtime fetch。開啟匯出/列表時需要這支 Node server（非純靜態）；關閉則可純靜態。
 - **字型**：藏文暫用 TTF（本機無 woff2 轉檔工具），悉曇用 woff2；藏文轉 woff2 列為日後清理。
-- **尚未做（延後）**：即時 IME 打字、螢幕虛擬鍵盤、天城體輸入（皆存在於孵化器原型）。
+- **尚未做（延後）**：即時 IME 打字、天城體輸入、螢幕虛擬鍵盤的其餘分頁（皆存在於孵化器原型）；虛擬鍵盤的「藏文梵字」五組已以輔助輸入的形式加入。
 
 ## 致謝
 

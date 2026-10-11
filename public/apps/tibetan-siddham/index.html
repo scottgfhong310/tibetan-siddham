@@ -19,6 +19,8 @@
 
   <link rel="stylesheet" href="./tibetan-siddham.css" />
   <link rel="stylesheet" href="./side-tool.css" />
+  <link rel="stylesheet" href="./filter-clear.css" />   <!-- 共用 utility：搜尋框「清除」× 鈕 -->
+  <link rel="stylesheet" href="./assist.css" />
 </head>
 
 <body>
@@ -165,10 +167,49 @@
     </div>
   </main>
 
+  <!-- 輔助輸入：固定在右側的藏文字形選盤（母音／子音／元音符號／下加輔音／標點；data/assist.json）。
+       點字 → 把其羅馬記法插入輸入框游標處。由 keyboard 側邊工具開關，
+       **覆蓋式、不推主畫面**（assist.css / assist.js；DESIGN §13） -->
+  <section id="assist-panel" class="card assist-panel" hidden>
+    <div class="assist-head">
+      <span class="assist-title" data-i18n="assist.title">輔助輸入</span>
+      <span class="assist-head-actions">
+        <a href="#!" id="assist-toggle-tools" class="assist-iconbtn" data-i18n-title="assist.toggleTools" title="顯示 / 隱藏工具列">
+          <i class="material-icons">more_vert</i>
+        </a>
+        <a href="#!" id="assist-close" class="assist-iconbtn" data-i18n-title="assist.close" title="關閉">
+          <i class="material-icons">close</i>
+        </a>
+      </span>
+    </div>
+    <input id="assist-search" type="search" class="assist-search browser-default" autocomplete="off"
+      data-i18n-placeholder="assist.search" data-filter-clear />
+    <!-- 分類 chips（單選）：全部＋五類，由 assist.js 填 -->
+    <div id="assist-cats" class="assist-cats"></div>
+    <div class="assist-scroll">
+      <div id="assist-body"></div>
+    </div>
+    <!-- 輔助按鈕：插入 空格 / 換行 / 連字號（空格＝音節邊界、連打兩個＝tsheg；見 DESIGN §5） -->
+    <div class="assist-controls">
+      <a href="#!" class="assist-ctrl" data-ins="space" data-i18n-title="assist.space" title="空格">
+        <i class="material-icons">space_bar</i><span data-i18n="assist.space">空格</span>
+      </a>
+      <a href="#!" class="assist-ctrl" data-ins="newline" data-i18n-title="assist.newline" title="換行">
+        <i class="material-icons">keyboard_return</i><span data-i18n="assist.newline">換行</span>
+      </a>
+      <a href="#!" class="assist-ctrl" data-ins="dash" data-i18n-title="assist.dash" title="連字號">
+        <i class="material-icons">remove</i><span data-i18n="assist.dash">連字號</span>
+      </a>
+    </div>
+  </section>
+
   <!-- ===== 右側工具列（flex 自動堆疊） ===== -->
   <div class="side-tools">
     <div id="setting-downloads" class="side-tool" data-i18n-title="tool.downloads" title="匯出檔清單">
       <i class="material-icons">dehaze</i>
+    </div>
+    <div id="setting-assist" class="side-tool" data-i18n-title="tool.assist" title="輔助輸入">
+      <i class="material-icons">keyboard</i>
     </div>
     <div id="setting-chart" class="side-tool" data-i18n-title="tool.chart" title="字元對照表">
       <i class="material-icons">table_chart</i>
@@ -203,6 +244,9 @@
   <script src="./locales/zh-Hant.js"></script>
   <script src="./locales/en.js"></script>
   <script src="./locales/ja.js"></script>
+
+  <script src="./filter-clear.js"></script>   <!-- 共用 utility：搜尋框清除鈕（要在會呼叫 I18n.apply 的控制器之前） -->
+  <script src="./assist.js"></script>         <!-- 輔助輸入面板（classic；只碰 #ts-input 與 #setting-assist） -->
 
   <!-- 頁面控制器（ESM module：import TibetanSiddhamConverter 防腐層；module 天然 defer） -->
   <script src="./side-tool.js"></script>   <!-- 共用 utility：側鍵「已執行」微回饋 -->

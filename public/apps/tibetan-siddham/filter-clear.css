@@ -1,0 +1,69 @@
+/* filter-clear.css — 篩選／搜尋輸入框「清除」鈕 utility（家族共用，byte-identical 同步）
+ *
+ * 給任何「輸入即篩選／搜尋」的文字框加一顆右內緣的 × 清除鈕：有文字才顯示，
+ * 點擊＝清空 ＋ 派發 input 事件（既有篩選邏輯自動重跑）＋ 重新聚焦；Esc 亦清空。
+ * 與 side-tool.css / thinking-dot.css 同屬「複製進各 app、保持 byte-identical」的家族資產。
+ *
+ * 用法：輸入框加 data-filter-clear 屬性，載入 filter-clear.js 即自動掛上（就地包一層 .filter-clear-wrap）。
+ * 顏色走 currentColor（繼承所在容器的主題前景色），不綁任何 app 專屬 token，故各 app 通用、light/dark 自適應。
+ */
+.filter-clear-wrap {
+  position: relative;
+  display: block;
+}
+
+/* 讓出清除鈕的空間（longhand + 較高特異度，蓋過多數 app 對輸入框的 padding 設定） */
+.filter-clear-wrap > input {
+  padding-right: 34px !important;
+}
+
+/* type="search" 的原生清除鈕：隱藏，避免與本 utility 的 × 重複（如 bonji 的 assist-search） */
+.filter-clear-wrap > input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+.filter-clear {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  display: none;                 /* 預設隱藏；有文字時由 JS 加 .has-value 才顯示 */
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: currentColor;
+  opacity: .5;
+  cursor: pointer;
+  line-height: 0;
+  transition: opacity .12s ease, background .12s ease;
+}
+
+.filter-clear-wrap.has-value .filter-clear {
+  display: flex;
+}
+
+/* :hover/:focus/:active 三態一起指定，蓋過 Materialize 對裸 <button> 的 teal 互動底（家族 §5.1 gotcha） */
+.filter-clear:hover,
+.filter-clear:focus,
+.filter-clear:active {
+  opacity: .95;
+  background: rgba(127, 127, 127, .16);
+}
+
+.filter-clear:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+
+.filter-clear svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
