@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * verify.js — tibetan-siddham 的契約檢查（輔助輸入面板 ＋ 引擎符號記法的分流 ＋ 三個空格→全形空格）。
+ * verify.js — tibetan-siddham 的契約檢查（輔助輸入面板 ＋ 子音＋元音符號／下加字 ＋ 引擎符號記法的分流 ＋ 三個空格→全形空格）。
  *
  *   node scripts/verify.js             跑全部檢查（任何一條 FAIL ⇒ exit 1）
  *   node scripts/verify.js --selftest  反向驗證：在記憶體裡把世界改壞，每一種改壞都必須被對應的那一條抓到
@@ -299,6 +299,40 @@ const CHECKS = [
     }
     return out;
   } },
+
+  // ② 只單獨驗每一格，看不見「子音後面再接東西」：2026-10-22 之前 c／ch／j／jh／;n／~n／.t／.th／.d／.dh／.n／;s／.s
+  // 這 13 個子音有「帶 a 的整串＝基字、單獨記號＝下加字」兩套記法，jaa 轉成 ཛ（a 被 ja 吃掉）、jrii 轉成沒有基字的 ྫྲཱི，
+  // 而 ② 一直是綠的。期望值取自面板資料（assist.json 的字形），不取自規則表。
+  { name: '⑪ 子音＋元音符號／下加字：每一個子音鍵去掉隱含的 a，接每一個元音符號與下加 r・y・v，藏文＝子音字形＋那幾個字形（兩種輸入法）', run: (w) => {
+    const out = [];
+    const cat = (id) => ((w.data.categories || []).find((c) => c.id === id) || { entries: [] }).entries.filter((e) => e.code);
+    const cons = cat('consonant'), vsigns = cat('vowel_sign');
+    const subs = cat('subjoined').filter((e) => ['r', 'y', 'v'].includes(e.code));
+    const nfc = (s) => s.normalize('NFC');
+    // 明講的豁免：ny 是 ña 的別名（tibetan.tsv），與 n＋ya 撞號——要不要拿掉別名待 owner 裁決（2026-10-22）。
+    // 鍵是「子音去掉 a ＋ 下加字」，那一組接任何元音符號都豁免；哪天其中有一個轉對了，這裡會報「豁免已經不需要」，
+    // 免得豁免比問題活得久。
+    const KNOWN = new Set(['ny']);
+    let n = 0;
+    for (const c of cons) {
+      if (!c.code.endsWith('a')) { out.push(`子音 ${JSON.stringify(c.code)} 不是以隱含的 a 結尾——檢查的前提不成立`); continue; }
+      const stem = c.code.slice(0, -1);
+      // [輸入, 期望的藏文, 豁免鍵]
+      const cases = vsigns.map((v) => w.signs.has(v.code) ? [stem + 'a' + v.code, c.char + v.char, ''] : [stem + v.code, c.char + v.char, '']);
+      for (const s of subs) for (const v of vsigns.filter((x) => !w.signs.has(x.code))) cases.push([stem + s.code + v.code, c.char + s.char + v.char, stem + s.code]);
+      for (const [input, want, key] of cases) {
+        for (const m of METHODS) {
+          n++;
+          const got = w.convert(input, m).tibetan;
+          const ok = nfc(got) === nfc(want);
+          if (KNOWN.has(key)) { if (ok) out.push(`${JSON.stringify(input)}（${m}）已經轉對了，豁免 ${JSON.stringify(key)} 已經不需要——把它從 KNOWN 拿掉`); continue; }
+          if (!ok) out.push(`${JSON.stringify(input)}（${m}）：得到 ${cp(got)}，應為 ${cp(nfc(want))}`);
+        }
+      }
+    }
+    if (!n) out.push('一個組合都沒有驗到——空的比對不算通過');
+    return out;
+  } },
 ];
 
 function run(world) {
@@ -349,7 +383,11 @@ const INJECTIONS = [
   ['拉丁欄也出現全形空格', 9, (w) => { const f = w.convert; w.convert = (i, m, g) => { const r = f(i, m, g); return { ...r, latin: i.includes('   ') ? r.latin.replace(' ', String.fromCodePoint(0x3000)) : r.latin }; }; }],
   ['全形空格後面多一個 tsheg', 9, (w) => { const f = w.convert; w.convert = (i, m, g) => { const r = f(i, m, g); return { ...r, tibetan: r.tibetan.split(String.fromCodePoint(0x3000)).join(String.fromCodePoint(0x3000, 0x0F0B)) }; }; }],
   ['悉曇欄把全形空格兩側併成一個音節（不是邊界）', 9, (w) => { const f = w.convert; w.convert = (i, m, g) => { const r = f(i, m, g); return { ...r, siddham: r.siddham.replace(String.fromCodePoint(0x115BF, 0x3000, 0x11580), String.fromCodePoint(0x3000)) }; }; }],
-  ['控制器直接 import 藏文核心', 7, (w) => { w.appJs.find((f) => f.name === 'tibetan-siddham.js').src += '\nimport { ascii2tibetan } from "./tibetan-core.js";'; }],
+  ['ja 吃掉後面的 a（jaa → ཛ，2026-10-22 之前的規則表）', 10, (w) => { const f = w.convert; w.convert = (i, m, g) => f(/^ja[aiu]/.test(i) ? 'ja' + i.slice(3) : i, m, g); }],
+  ['開頭的 j 輸出下加字（jrii → ྫྲཱི）', 10, (w) => { const f = w.convert; w.convert = (i, m, g) => { const r = f(i, m, g); return /^j[^ah]/.test(i) ? { ...r, tibetan: r.tibetan.replace(String.fromCodePoint(0x0F5B), String.fromCodePoint(0x0FAB)) } : r; }; }],
+  ['ny 的豁免已經轉對了卻還掛著', 10, (w) => { const f = w.convert; w.convert = (i, m, g) => { const r = f(i, m, g); return i === 'nyi' ? { ...r, tibetan: String.fromCodePoint(0x0F53, 0x0FB1, 0x0F72) } : r; }; }],
+  ['面板沒有子音（空的比對）', 10, (w) => { w.data.categories[1].entries = []; }],
+  ['控制器直接 import 藏文核心', 7,(w) => { w.appJs.find((f) => f.name === 'tibetan-siddham.js').src += '\nimport { ascii2tibetan } from "./tibetan-core.js";'; }],
 ];
 
 function cloneWorld(w) {
