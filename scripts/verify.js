@@ -353,14 +353,22 @@ const CHECKS = [
       'oṃ maṇi padme hūṃ', 'oM maNi padme hUM',                               // IAST（長度會變）／Kyoto-Harvard
       'ka|  ma', 'ka |  ma', '~~ ~~ ||   ka', 'ka--ma  2  ma', 'ka-ma  ga',
       '   ka   ma  ', 'ka  ma\nga  da\n\n  ha |', 'ka:   ma',
-      codes.join('  '), codes.filter((c) => !c.includes('~')).join(' '),
-      '~ ~', '~ ~~',
+      codes.join('  '), codes.join(' '),
+      '~ ~', '~ ~~', '~~ ~', 'ka ~ ~ ma',
     ];
-    // 明講的豁免：「忽略空格＝開」時，只隔一個空格的 ~ 在整段轉換裡會併起來——空格先被吃掉，
-    // 藏文核心接出 ~~ 或 ~~~，標點政策再把前兩個換成 ༄（~ ~ → ༄、~ ~~ → ༄𑗁），一格一格轉則是 𑗁 𑗁、𑗁 ༄。
-    // 是不是錯、改哪一邊待 owner 裁決（2026-10-23）。哪天整段轉換不再併起來，這裡會報「豁免已經不需要」。
-    const KNOWN = (input, ignore) => ignore && (input === '~ ~' || input === '~ ~~');
     let n = 0;
+    // 只隔一個空格的 ~ 不併起來〔owner 2026-10-23：一格一格的讀法是對的〕——在那之前「忽略空格＝開」時
+    // 整段的 ~ ~ 是 ༄、~ ~~ 是 ༄𑗁。期望值逐字寫死；同一塊裡的 ~~~ 照舊是 ༄𑗁（對照組）。
+    const SIGN = String.fromCodePoint(0x115C1), YIG = String.fromCodePoint(0x0F04);
+    for (const [input, ignore, want] of [
+      ['~ ~', true, SIGN + SIGN], ['~ ~~', true, SIGN + YIG], ['~~ ~', true, YIG + SIGN], ['~~~', true, YIG + SIGN],
+      ['~ ~', false, SIGN + ' ' + SIGN], ['~ ~~', false, SIGN + ' ' + YIG],
+    ]) {
+      for (const m of METHODS) {
+        const got = w.convert(input, m, ignore).tibetan;
+        if (got !== want) out.push(`${JSON.stringify(input)}（${m}、忽略＝${ignore ? '開' : '關'}）藏文：得到 ${cp(got)}，應為 ${cp(want)}`);
+      }
+    }
     for (const input of corpus) {
       for (const m of METHODS) {
         for (const ignore of [true, false]) {
@@ -374,7 +382,6 @@ const CHECKS = [
           }
           if (segs.map((s) => s.gap + s.text).join('') !== input.replace(/\s+$/, '')) out.push(`${tag}：各格與空白接回去不是原本的輸入`);
           const tib = segs.map((s) => s.tibetan).join('');
-          if (KNOWN(input, ignore)) { if (strip(tib) === strip(whole.tibetan)) out.push(`${tag}：一格一格與整段已經相同，豁免「只隔一個空格的 ~」已經不需要——把它拿掉`); continue; }
           if (strip(tib) !== strip(whole.tibetan)) out.push(`${tag}藏文：各格接起來 ${cp(strip(tib))}，整段是 ${cp(strip(whole.tibetan))}`);
           const lat = segs.map((s) => s.latin).join('');
           if (strip(lat) !== strip(whole.latin)) out.push(`${tag}拉丁：各格接起來 ${JSON.stringify(strip(lat))}，整段是 ${JSON.stringify(strip(whole.latin))}`);
@@ -453,7 +460,8 @@ const INJECTIONS = [
   ['對照的一格藏文只剩第一個字元（下加字掉了）', 11, (w) => { const f = w.segments; w.segments = (...a) => f(...a).map((x) => ({ ...x, tibetan: Array.from(x.tibetan).slice(0, 1).join('') })); }],
   ['對照的拉丁拿掉長音（ā → a）', 11, (w) => { const f = w.segments; w.segments = (...a) => f(...a).map((x) => ({ ...x, latin: x.latin.replace(/ā/g, 'a') })); }],
   ['對照不分輸入法（一律 ISO 15919）', 11, (w) => { const f = w.segments; w.segments = (i, m, g) => f(i, 'ISO15919', g); }],
-  ['「只隔一個空格的 ~」整段已經不併了，豁免還掛著', 11, (w) => { const f = w.convert; w.convert = (i, m, g) => { const r = f(i, m, g); return i === '~ ~' ? { ...r, tibetan: String.fromCodePoint(0x115C1, 0x115C1) } : r; }; }],
+  ['只隔一個空格的 ~ 又併成 ༄（2026-10-23 之前的整段轉換）', 11, (w) => { const f = w.convert; w.convert = (i, m, g) => { const r = f(i, m, g); return g !== false && /~ ~/.test(i) ? { ...r, tibetan: r.tibetan.split(String.fromCodePoint(0x115C1, 0x115C1)).join(String.fromCodePoint(0x0F04)) } : r; }; }],
+  ['同一塊裡的 ~~~ 也被拆開（擋過頭）', 11, (w) => { const f = w.convert; w.convert = (i, m, g) => { const r = f(i, m, g); return i === '~~~' ? { ...r, tibetan: String.fromCodePoint(0x115C1, 0x115C1, 0x115C1) } : r; }; }],
   ['頁面沒有 #out-align', 12, (w) => { w.html = w.html.replace('id="out-align"', 'id="out-other"'); }],
   ['控制器自己切格（不經防腐層）', 12, (w) => { const f = w.appJs.find((x) => x.name === 'tibetan-siddham.js'); f.src = f.src.split('converter.segments(').join('mySegments('); }],
   ['zh-Hant 少 out.align', 12, (w) => { delete w.locales['zh-Hant']['out.align']; }],
