@@ -16,6 +16,8 @@ I18n.register('ja', {
   'out.siddham': '悉曇 Siddhaṁ',
   'out.latin': 'ラテン翻字',
   'out.codepoints': 'Unicode コードポイント（チベット）',
+  'out.align': '対照：チベット｜ラテン',
+  'out.alignHint': 'セルをクリックすると入力の該当箇所を選択',
   'tool.copy': 'コピー',
   'tool.copyInput': '入力をコピー',
   'tool.mode': 'ライト / ダーク切替',

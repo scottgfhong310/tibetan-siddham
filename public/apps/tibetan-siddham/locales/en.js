@@ -16,6 +16,8 @@ I18n.register('en', {
   'out.siddham': 'Siddhaṁ',
   'out.latin': 'Transliteration',
   'out.codepoints': 'Unicode code points (Tibetan)',
+  'out.align': 'Aligned: Tibetan | Latin',
+  'out.alignHint': 'Click a cell to select its part of the input',
   'tool.copy': 'Copy',
   'tool.copyInput': 'Copy input',
   'tool.mode': 'Toggle light / dark',

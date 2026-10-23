@@ -5,7 +5,7 @@
  * 唯一的轉換介面是 ./tibetan-siddham-converter.js（TibetanSiddhamConverter 防腐層）；
  * 本檔不得直接 import vendor/bonji-input/siddham.js 或 tibetan-core.js。
  *
- * 碰 DOM 的行為：即時轉換、選項、複製、清除、主題切換、i18n 重繪、對照表導覽、
+ * 碰 DOM 的行為：即時轉換、對照檢視（點一格選取輸入）、選項、複製、清除、主題切換、i18n 重繪、對照表導覽、
  * JSON 匯出（POST /api/tibetan-siddham/export）、匯出檔清單面板（GET …/downloads）、
  * 載回已存檔、清空匯出夾（POST …/clear）。
  */
@@ -33,6 +33,8 @@ import { TibetanSiddhamConverter } from "./tibetan-siddham-converter.js";
     latin: document.getElementById('out-latin'),
     codepoints: document.getElementById('out-codepoints')
   };
+  var $align = document.getElementById('out-align');
+  var segs = [];   // 對照檢視目前的格（converter.segments 的結果；start／end 是在輸入框裡的位置）
 
   var state = { theme: 'dark' };
   // 目前頁面內容來自哪個匯出檔（由清單載入或上次匯出設定）；下次匯出會記進新檔的 sourceFile
@@ -123,6 +125,7 @@ import { TibetanSiddhamConverter } from "./tibetan-siddham-converter.js";
     outEls.siddham.textContent = '';
     outEls.latin.textContent = '';
     outEls.codepoints.textContent = '';
+    renderAlign('');
   }
 
   function convert() {
@@ -142,6 +145,111 @@ import { TibetanSiddhamConverter } from "./tibetan-siddham-converter.js";
     outEls.siddham.textContent = r.siddham;
     outEls.latin.textContent = r.latin;
     outEls.codepoints.textContent = r.codepoints.tibetan;
+    renderAlign(input);
+  }
+
+  /* ---------- 對照檢視（DESIGN §14） ---------- */
+
+  var TIB_PUNCT_END = /[།༎༄\u{115C1}]$/u;   // 標點之後不接 tsheg（同轉換器的標點政策）
+
+  function el(tag, cls) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    return e;
+  }
+
+  // 一格一張卡。怎麼分行、分組只看那一格前面的空白：
+  //   含換行或三個以上空格（全形空格）→ 新的一行；「忽略空格」開著時只隔一個空格 → 同一個音節、卡貼在一起；
+  //   其餘 → 新的一組，組與組之間畫 tsheg（前一格以標點結尾就只留間距）。
+  function renderAlign(input) {
+    segs = input ? converter.segments(input) : [];
+    $align.textContent = '';
+    var ignore = $ignoreSpaces.checked;
+    var line = null, group = null;
+    segs.forEach(function (s, i) {
+      var spaces = (s.gap.match(/[^\S\n\u3000]/g) || []).length;
+      var newLine = !line || /[\n\u3000]/.test(s.gap) || spaces >= 3;
+      if (newLine) {
+        line = el('div', 'al-line');
+        $align.appendChild(line);
+        group = null;
+      }
+      if (!group || !(ignore && spaces === 1)) {
+        if (group) {
+          var sep = el('span', 'al-sep tibetan-text');
+          sep.textContent = TIB_PUNCT_END.test(segs[i - 1].tibetan) ? '' : '\u0F0B';
+          line.appendChild(sep);
+        }
+        group = el('span', 'al-group');
+        line.appendChild(group);
+      }
+      var cell = el('button', 'al-cell');
+      cell.type = 'button';
+      cell.setAttribute('data-i', String(i));
+      cell.title = s.text;
+      var tib = el('span', 'al-tib tibetan-text');
+      tib.textContent = s.tibetan || '\u00A0';
+      var lat = el('span', 'al-lat');
+      lat.textContent = s.latin || '\u00A0';
+      cell.appendChild(tib);
+      cell.appendChild(lat);
+      group.appendChild(cell);
+    });
+    syncAlignActive();
+  }
+
+  // 標出與輸入框目前選取（或游標所在）重疊的格；輸入框沒有焦點時不標
+  function syncAlignActive() {
+    var a = $input.selectionStart, b = $input.selectionEnd;
+    var on = document.activeElement === $input;
+    $align.querySelectorAll('.al-cell').forEach(function (cell) {
+      var s = segs[+cell.getAttribute('data-i')];
+      var hit = on && s && (a === b ? (s.start <= a && a <= s.end) : (s.start < b && s.end > a));
+      cell.classList.toggle('active', !!hit);
+    });
+  }
+
+  // textarea 裡第 pos 個字元的上緣，距 textarea 上緣幾 px（以同樣樣式的隱形 div 量）
+  function caretTop(ta, pos) {
+    var cs = getComputedStyle(ta);
+    var div = el('div');
+    ['boxSizing', 'width', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+      'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+      'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight',
+      'textTransform', 'wordSpacing', 'tabSize'].forEach(function (k) { div.style[k] = cs[k]; });
+    div.style.position = 'absolute';
+    div.style.visibility = 'hidden';
+    div.style.top = '0';
+    div.style.left = '-9999px';
+    div.style.whiteSpace = 'pre-wrap';
+    div.style.overflowWrap = 'break-word';
+    div.textContent = ta.value.slice(0, pos);
+    var mark = el('span');
+    mark.textContent = ta.value.slice(pos) || '.';
+    div.appendChild(mark);
+    document.body.appendChild(div);
+    var top = mark.offsetTop;
+    document.body.removeChild(div);
+    return top - ta.scrollTop;
+  }
+
+  // 選取的那一行不在畫面上時，把它捲到視窗上方三分之一處
+  function revealInput(pos) {
+    var y = $input.getBoundingClientRect().top + caretTop($input, pos);
+    var lh = parseFloat(getComputedStyle($input).lineHeight) || 24;
+    if (y >= 72 && y + lh <= window.innerHeight - 32) return;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollBy({ top: y - window.innerHeight / 3, behavior: reduce ? 'auto' : 'smooth' });
+  }
+
+  // 點一格 → 選取輸入框裡的那一段（之後直接打字就是取代它）
+  function selectSegment(i) {
+    var s = segs[i];
+    if (!s) return;
+    $input.focus({ preventScroll: true });
+    $input.setSelectionRange(s.start, s.end);
+    revealInput(s.start);
+    syncAlignActive();
   }
 
   // 目前的「來源 + 標題 + 選項 + 輸入 + 四項輸出」（供匯出用）
@@ -399,6 +507,18 @@ import { TibetanSiddhamConverter } from "./tibetan-siddham-converter.js";
     $inputMethod.addEventListener('change', convert);
     $translit.addEventListener('change', convert);
     $ignoreSpaces.addEventListener('change', convert);
+
+    // 對照檢視：按下時不搶走輸入框的焦點；點一格 → 選取那一段。游標／選取變了 → 重標
+    $align.addEventListener('mousedown', function (e) {
+      if (e.target.closest('.al-cell')) e.preventDefault();
+    });
+    $align.addEventListener('click', function (e) {
+      var cell = e.target.closest('.al-cell');
+      if (cell) selectSegment(+cell.getAttribute('data-i'));
+    });
+    ['select', 'keyup', 'mouseup', 'focus', 'blur', 'selectionchange'].forEach(function (ev) {
+      $input.addEventListener(ev, syncAlignActive);
+    });
 
     // 範例 chips
     document.querySelectorAll('.ex-chips .ex').forEach(function (chip) {

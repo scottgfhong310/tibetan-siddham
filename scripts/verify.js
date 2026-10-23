@@ -29,6 +29,9 @@ const METHODS = ['ISO15919', 'KH'];
 const KA = String.fromCodePoint(0x0F40);
 const MA = String.fromCodePoint(0x0F58);
 
+// 對照檢視的樣本：藥師長咒（owner 2026-10-23 校對時遇到「對不準」的那一段，原樣）
+const ALIGN_SAMPLE = '~~ ~~ ||   da tya  thaa |   ghu  me  ghu  me |   e  me  ne  me  he  ma  de  ma  de  su bda  da  ta  ga  da |   sa  maa  dhya  dhi  .s.the  de  a  de  ma  de |   paa  le  paa  pa;m  ;sao  dta ne |   sa  rbba  saa  pa;m  naa  sha  ya  ma  ma  bu ddhi  bu ddho  dda  me |   u  me  ku  me |   bu dbha  k.se';
+
 const cp = (s) => Array.from(s, (c) => 'U+' + c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')).join(' ') || '(空)';
 
 /* ---------- 讀進「世界」：之後所有檢查只看這個物件（selftest 才改得壞它） ---------- */
@@ -75,6 +78,10 @@ async function loadWorld() {
     convert: (input, inputMethod, ignore = true) => {
       conv.setOptions({ inputMethod, ignoreSpacesAndHyphens: ignore });
       return conv.convert(input);
+    },
+    segments: (input, inputMethod, ignore = true) => {
+      conv.setOptions({ inputMethod, ignoreSpacesAndHyphens: ignore });
+      return conv.segments(input);
     },
     locales,
     html: read('index.html'),
@@ -333,6 +340,59 @@ const CHECKS = [
     if (!n) out.push('一個組合都沒有驗到——空的比對不算通過');
     return out;
   } },
+
+  // 對照檢視（DESIGN §14）一格一格各自轉；它說的是「這一格的藏文就是整段輸出裡的那一段」。
+  // 期望值取自整段的 convert()，不取自 segments() 自己：兩邊拿掉分隔（tsheg、空白、全形空格、換行）之後必須逐字相同。
+  { name: '⑫ 對照的每一格：位置對得回輸入、各格的藏文與拉丁接起來＝整段轉換的結果（拿掉分隔之後；兩種輸入法 × 忽略空格開／關）', run: (w) => {
+    const out = [];
+    const strip = (s) => s.replace(/[\s་]/g, '');
+    const codes = (w.data.categories || []).flatMap((c) => (c.entries || []).map((e) => e.code).filter(Boolean));
+    const corpus = [
+      ALIGN_SAMPLE,
+      'o;m', 'siddha;m', 'na ma.h', 'hrii.h', 'huu~m',                         // 範例 chips
+      'oṃ maṇi padme hūṃ', 'oM maNi padme hUM',                               // IAST（長度會變）／Kyoto-Harvard
+      'ka|  ma', 'ka |  ma', '~~ ~~ ||   ka', 'ka--ma  2  ma', 'ka-ma  ga',
+      '   ka   ma  ', 'ka  ma\nga  da\n\n  ha |', 'ka:   ma',
+      codes.join('  '), codes.filter((c) => !c.includes('~')).join(' '),
+      '~ ~', '~ ~~',
+    ];
+    // 明講的豁免：「忽略空格＝開」時，只隔一個空格的 ~ 在整段轉換裡會併起來——空格先被吃掉，
+    // 藏文核心接出 ~~ 或 ~~~，標點政策再把前兩個換成 ༄（~ ~ → ༄、~ ~~ → ༄𑗁），一格一格轉則是 𑗁 𑗁、𑗁 ༄。
+    // 是不是錯、改哪一邊待 owner 裁決（2026-10-23）。哪天整段轉換不再併起來，這裡會報「豁免已經不需要」。
+    const KNOWN = (input, ignore) => ignore && (input === '~ ~' || input === '~ ~~');
+    let n = 0;
+    for (const input of corpus) {
+      for (const m of METHODS) {
+        for (const ignore of [true, false]) {
+          const tag = `${JSON.stringify(input.length > 40 ? input.slice(0, 40) + '…' : input)}（${m}、忽略＝${ignore ? '開' : '關'}）`;
+          const segs = w.segments(input, m, ignore);
+          const whole = w.convert(input, m, ignore);
+          if (/\S/.test(input) && !segs.length) { out.push(`${tag}：沒有任何一格`); continue; }
+          n += segs.length;
+          for (const s of segs) {
+            if (input.slice(s.start, s.end) !== s.text || /\s/.test(s.text) || !s.text) out.push(`${tag}：格 ${JSON.stringify(s.text)} 的位置 ${s.start}–${s.end} 對不回輸入`);
+          }
+          if (segs.map((s) => s.gap + s.text).join('') !== input.replace(/\s+$/, '')) out.push(`${tag}：各格與空白接回去不是原本的輸入`);
+          const tib = segs.map((s) => s.tibetan).join('');
+          if (KNOWN(input, ignore)) { if (strip(tib) === strip(whole.tibetan)) out.push(`${tag}：一格一格與整段已經相同，豁免「只隔一個空格的 ~」已經不需要——把它拿掉`); continue; }
+          if (strip(tib) !== strip(whole.tibetan)) out.push(`${tag}藏文：各格接起來 ${cp(strip(tib))}，整段是 ${cp(strip(whole.tibetan))}`);
+          const lat = segs.map((s) => s.latin).join('');
+          if (strip(lat) !== strip(whole.latin)) out.push(`${tag}拉丁：各格接起來 ${JSON.stringify(strip(lat))}，整段是 ${JSON.stringify(strip(whole.latin))}`);
+        }
+      }
+    }
+    if (!n) out.push('一格都沒有驗到——空的比對不算通過');
+    return out;
+  } },
+
+  { name: '⑬ 對照檢視的接線：頁面有 #out-align、控制器向防腐層要 segments()、三語都有 out.align', run: (w) => {
+    const out = [];
+    if (!w.html.includes('id="out-align"')) out.push('index.html 缺 id="out-align"');
+    const ctrl = (w.appJs.find((f) => f.name === 'tibetan-siddham.js') || { src: '' }).src;
+    if (!/converter\.segments\(/.test(ctrl)) out.push('tibetan-siddham.js 沒有呼叫 converter.segments()——對照檢視的格子不是防腐層切的');
+    for (const l of LANGS) if (!w.locales[l]['out.align']) out.push(`${l} 缺 out.align`);
+    return out;
+  } },
 ];
 
 function run(world) {
@@ -387,6 +447,16 @@ const INJECTIONS = [
   ['開頭的 j 輸出下加字（jrii → ྫྲཱི）', 10, (w) => { const f = w.convert; w.convert = (i, m, g) => { const r = f(i, m, g); return /^j[^ah]/.test(i) ? { ...r, tibetan: r.tibetan.replace(String.fromCodePoint(0x0F5B), String.fromCodePoint(0x0FAB)) } : r; }; }],
   ['ny 的豁免已經轉對了卻還掛著', 10, (w) => { const f = w.convert; w.convert = (i, m, g) => { const r = f(i, m, g); return i === 'nyi' ? { ...r, tibetan: String.fromCodePoint(0x0F53, 0x0FB1, 0x0F72) } : r; }; }],
   ['面板沒有子音（空的比對）', 10, (w) => { w.data.categories[1].entries = []; }],
+  ['對照的格位置差一個字', 11, (w) => { const f = w.segments; w.segments = (...a) => f(...a).map((x) => ({ ...x, start: x.start + 1, end: x.end + 1 })); }],
+  ['對照一格都沒有', 11, (w) => { w.segments = () => []; }],
+  ['對照的最後一格藏文多一個字', 11, (w) => { const f = w.segments; w.segments = (...a) => { const r = f(...a); if (r.length) r[r.length - 1] = { ...r[r.length - 1], tibetan: r[r.length - 1].tibetan + KA }; return r; }; }],
+  ['對照的一格藏文只剩第一個字元（下加字掉了）', 11, (w) => { const f = w.segments; w.segments = (...a) => f(...a).map((x) => ({ ...x, tibetan: Array.from(x.tibetan).slice(0, 1).join('') })); }],
+  ['對照的拉丁拿掉長音（ā → a）', 11, (w) => { const f = w.segments; w.segments = (...a) => f(...a).map((x) => ({ ...x, latin: x.latin.replace(/ā/g, 'a') })); }],
+  ['對照不分輸入法（一律 ISO 15919）', 11, (w) => { const f = w.segments; w.segments = (i, m, g) => f(i, 'ISO15919', g); }],
+  ['「只隔一個空格的 ~」整段已經不併了，豁免還掛著', 11, (w) => { const f = w.convert; w.convert = (i, m, g) => { const r = f(i, m, g); return i === '~ ~' ? { ...r, tibetan: String.fromCodePoint(0x115C1, 0x115C1) } : r; }; }],
+  ['頁面沒有 #out-align', 12, (w) => { w.html = w.html.replace('id="out-align"', 'id="out-other"'); }],
+  ['控制器自己切格（不經防腐層）', 12, (w) => { const f = w.appJs.find((x) => x.name === 'tibetan-siddham.js'); f.src = f.src.split('converter.segments(').join('mySegments('); }],
+  ['zh-Hant 少 out.align', 12, (w) => { delete w.locales['zh-Hant']['out.align']; }],
   ['控制器直接 import 藏文核心', 7,(w) => { w.appJs.find((f) => f.name === 'tibetan-siddham.js').src += '\nimport { ascii2tibetan } from "./tibetan-core.js";'; }],
 ];
 

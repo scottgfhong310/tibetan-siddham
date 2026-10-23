@@ -16,6 +16,8 @@ I18n.register('zh-Hant', {
   'out.siddham': '悉曇 Siddhaṁ',
   'out.latin': '拉丁轉寫',
   'out.codepoints': 'Unicode 碼位（藏文）',
+  'out.align': '對照：藏文｜拉丁',
+  'out.alignHint': '點一格，選取輸入裡的那一段',
   'tool.copy': '複製',
   'tool.copyInput': '複製輸入',
   'tool.mode': '切換 light / dark',
